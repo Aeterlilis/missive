@@ -54,6 +54,8 @@ class App {
     this._setupCanvas();
     this._bindInk();
     this._fillPaper();
+    // 页面打开就预加载字体（24MB，提前下，避免回答时卡住）
+    this.scribe.ensureFont().catch(() => {});
     this._loop = this._loop.bind(this);
     requestAnimationFrame(this._loop);
   }

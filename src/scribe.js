@@ -25,9 +25,17 @@ export class Scribe {
 
   async ensureFont() {
     if (this._fontReady) return;
-    // 用中等字号加载字体（实际字号由 layout() 动态决定）
+    // 用中等字号加载字体。给 5 秒超时——字体文件大(24MB)时下载慢，
+    // 超时就用系统 serif 兜底，绝不让它卡死（否则 Safari 加载条永不消失）
     if (document.fonts && document.fonts.load) {
-      try { await document.fonts.load(`64px "LXGW WenKai"`); } catch {}
+      try {
+        await Promise.race([
+          document.fonts.load(`64px "LXGW WenKai"`),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('字体加载超时')), 5000)),
+        ]);
+      } catch (e) {
+        console.warn('字体未就绪，用 serif 兜底:', e.message);
+      }
     }
     // 准备离屏画布（大小无所谓，按需重建）
     this._off = makeOffscreen(8, 8);

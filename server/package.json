@@ -1,0 +1,15 @@
+{
+  "name": "ink-diary-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "墨问后端：静态托管前端 + 转发视觉大模型请求（保管 API key）",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

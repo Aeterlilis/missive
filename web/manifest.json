@@ -1,0 +1,19 @@
+{
+  "name": "墨问 ink-diary",
+  "short_name": "墨问",
+  "description": "用笔在墨水屏上写字，日记会用一手手写体回应你",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

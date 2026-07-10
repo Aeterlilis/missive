@@ -39,15 +39,15 @@ export class InkLayer {
   }
 
   _accept(e) {
-    // 接受笔（电磁笔、Apple Pencil 都是 pen）。调试/无笔时用参数放开：
-    //   ?mouse  → 鼠标也能写（电脑测试）
-    //   ?touch  → 手指也能写（iPad 无 Apple Pencil 时备用）
+    // 默认接受笔和手指（电磁笔、Apple Pencil、手指都能写）。
+    // 用参数可收紧：
+    //   ?penonly → 只接受笔（BOOX 上防手掌误触）
+    //   ?mouse   → 也接受鼠标（电脑测试）
     const params = new URLSearchParams(location.search);
-    const allowMouse = params.has('mouse');
-    const allowTouch = params.has('touch');
+    if (params.has('penonly') && e.pointerType !== 'pen') return false;
     if (e.pointerType === 'pen') return true;
-    if (allowMouse && e.pointerType === 'mouse') return true;
-    if (allowTouch && e.pointerType === 'touch') return true;
+    if (e.pointerType === 'touch') return true;
+    if (params.has('mouse') && e.pointerType === 'mouse') return true;
     return false;
   }
 

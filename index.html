@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <title>墨问</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 全屏画布：用户笔迹 + AI 手写都画在这里 -->
+  <canvas id="paper"></canvas>
+
+  <!-- 首次引导提示 -->
+  <div id="hint">用笔在这里写点什么…<br /><span style="font-size:18px;opacity:0.7">比如：什么是量子纠缠？</span></div>
+
+  <!-- 调试浮层 -->
+  <pre id="debug"></pre>
+
+  <!-- 霞鹜文楷：手写体字体。woff2 体积小，离线加载 -->
+  <style>
+    @font-face {
+      font-family: "LXGW WenKai";
+      src: url("fonts/LXGWWenKai.ttf") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
+    }
+  </style>
+
+  <!-- 模块以 ESM 加载，app.js 是主入口 -->
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

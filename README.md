@@ -1,8 +1,8 @@
-# 墨问 (ink-diary)
+# 墨问 · ebook-handwriting-diary
 
-> **用笔在屏幕上写字，停几秒，日记会用一手手写体一笔笔回答你——像一本会回应你的魔法日记。**
+> **用笔在电子书屏幕上写字，停几秒，日记会用一手手写体一笔笔回答你——像一本会回应你的魔法日记。**
 
-写在电子墨水屏（或 iPad）上的字会像墨水被纸吸走一样淡去，然后一个博学又冷幽默的"墨先生"用流畅的手写体浮现回答，再慢慢淡去。复刻自 reMarkable Paper Pro 上的 [riddle](https://github.com/MaximeRivest/riddle) 项目，硬件换成更易得的墨水屏平板，软件用网页重写。
+写在电子墨水屏（BOOX / reMarkable / iPad）上的字会像墨水被纸吸走一样淡去，然后一个博学又冷幽默的"墨先生"用流畅的手写体浮现回答，再慢慢淡去。复刻自 reMarkable Paper Pro 上的 [riddle](https://github.com/MaximeRivest/riddle) 项目，硬件换成更易得的墨水屏平板，软件用网页重写。
 
 ---
 

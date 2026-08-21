@@ -1,6 +1,5 @@
-/* Missive 前端样式
-   墨水屏铁律：纯黑白、无半透明、无渐变、无阴影、无次像素抗锯齿。
-   动画尽量少帧。 */
+/* Missive 前端样式（写字页）。
+   界面配色的半透明/毛玻璃变量见 chrome-theme.css，跟设置页/历史页共用。 */
 
 * {
   margin: 0;
@@ -96,6 +95,8 @@ body.theme-black #hint { color: #fff; }
   height: 42px;
   padding: 0;
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 50%;
@@ -149,6 +150,8 @@ body.theme-black #hint { color: #fff; }
   left: 12px;
   z-index: 6;
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
   border: 1px solid var(--ink);
   border-radius: 10px;
   padding: 10px 12px;
@@ -165,6 +168,8 @@ body.theme-black #hint { color: #fff; }
 .brush-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .brush-presets button {
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 14px;
@@ -213,6 +218,8 @@ body.theme-black #hint { color: #fff; }
 }
 .type-actions button {
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 20px;

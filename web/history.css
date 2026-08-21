@@ -12,6 +12,8 @@
   margin-bottom: 14px;
   overflow: hidden;
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
 }
 
 .conv-head {

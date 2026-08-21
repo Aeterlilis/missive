@@ -162,7 +162,9 @@ label > span {
 label:last-child { margin-bottom: 0; }
 
 /* :not(.color-hex-input) 排除选色盘的十六进制输入框——那个框的样式统一由 color-picker.css 管，
-   不然这条全局规则权重比 .color-hex-input 那个 class 选择器还高，会把窄内边距/小字号盖掉 */
+   不然这条全局规则权重比 .color-hex-input 那个 class 选择器还高，会把窄内边距/小字号盖掉。
+   输入框/文本域经常嵌在卡片这个"外层大框"里面，是"内层小框"，不接玻璃效果——不然框里长框，
+   只留纯色底，跟 .card 那层玻璃拉开层次。 */
 input[type="text"]:not(.color-hex-input),
 input[type="password"],
 input[type="number"],
@@ -174,10 +176,6 @@ textarea {
   font-size: 14px;
   font-family: inherit;
   background: var(--box-bg);
-  backdrop-filter: var(--box-blur);
-  -webkit-backdrop-filter: var(--box-blur);
-  box-shadow: var(--box-rim);
-  border-color: var(--box-border-color);
   color: var(--ink);
 }
 
@@ -343,7 +341,8 @@ textarea {
 .card-stack { position: relative; }
 .card-stack.collapsed { cursor: pointer; }
 .card-stack.collapsed.has-more { margin-bottom: 22px; }
-/* 卡片是嵌在滚动内容里的东西，不是浮动 chrome，不接玻璃效果（理由同 .switch-track） */
+/* 卡片本身是"外层大框"，要玻璃效果；卡片里嵌的输入框/文本域是"内层小框"，
+   不要玻璃效果，见 .card 和下面 input/textarea 那条规则的取舍 */
 .card-stack.collapsed.has-more::before,
 .card-stack.collapsed.has-more::after {
   content: '';
@@ -352,6 +351,10 @@ textarea {
   border: 1px solid var(--ink);
   border-radius: 16px;
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
 }
 .card-stack.collapsed.has-more::before { transform: translateY(9px) scale(0.96); z-index: 0; }
 .card-stack.collapsed.has-more::after { transform: translateY(18px) scale(0.92); z-index: -1; }
@@ -368,6 +371,10 @@ textarea {
   border-radius: 16px;
   padding: 14px 16px 48px;
   background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
 }
 .card-head {
   display: flex;
@@ -392,15 +399,12 @@ textarea {
 
 /* 互斥选择（API配置）：打勾圆圈 */
 .check-radio {
+  /* 嵌在 API 配置卡片里选中用的小圆点，跟输入框/文本域一样是"内层小框"，不接玻璃效果 */
   width: 26px;
   height: 26px;
   border-radius: 50%;
   border: 1.5px solid var(--ink);
   background: var(--box-bg);
-  backdrop-filter: var(--box-blur);
-  -webkit-backdrop-filter: var(--box-blur);
-  box-shadow: var(--box-rim);
-  border-color: var(--box-border-color);
   display: flex;
   align-items: center;
   justify-content: center;

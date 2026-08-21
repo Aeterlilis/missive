@@ -284,14 +284,13 @@ textarea {
   z-index: 1;
 }
 .switch-track {
+  /* 玻璃效果只留给外层的浮动 chrome（header/nav/按钮/面板），switch 这种嵌在内容里的
+     小控件不再叠一层，不然"玻璃里长玻璃"，观感反而乱——只保留底色系统（--box-bg），
+     不接 --box-blur/--box-rim/--box-border-color。 */
   position: absolute;
   inset: 0;
   background: var(--box-bg);
-  backdrop-filter: var(--box-blur);
-  -webkit-backdrop-filter: var(--box-blur);
-  box-shadow: var(--box-rim);
   border: 1px solid var(--ink);
-  border-color: var(--box-border-color);
   border-radius: 999px;
   transition: background 0.15s;
 }
@@ -344,6 +343,7 @@ textarea {
 .card-stack { position: relative; }
 .card-stack.collapsed { cursor: pointer; }
 .card-stack.collapsed.has-more { margin-bottom: 22px; }
+/* 卡片是嵌在滚动内容里的东西，不是浮动 chrome，不接玻璃效果（理由同 .switch-track） */
 .card-stack.collapsed.has-more::before,
 .card-stack.collapsed.has-more::after {
   content: '';
@@ -352,10 +352,6 @@ textarea {
   border: 1px solid var(--ink);
   border-radius: 16px;
   background: var(--box-bg);
-  backdrop-filter: var(--box-blur);
-  -webkit-backdrop-filter: var(--box-blur);
-  box-shadow: var(--box-rim);
-  border-color: var(--box-border-color);
 }
 .card-stack.collapsed.has-more::before { transform: translateY(9px) scale(0.96); z-index: 0; }
 .card-stack.collapsed.has-more::after { transform: translateY(18px) scale(0.92); z-index: -1; }
@@ -372,10 +368,6 @@ textarea {
   border-radius: 16px;
   padding: 14px 16px 48px;
   background: var(--box-bg);
-  backdrop-filter: var(--box-blur);
-  -webkit-backdrop-filter: var(--box-blur);
-  box-shadow: var(--box-rim);
-  border-color: var(--box-border-color);
 }
 .card-head {
   display: flex;

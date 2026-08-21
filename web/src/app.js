@@ -662,7 +662,7 @@ async function loadRuntimeConfig() {
       try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
       const root = document.documentElement.style;
       root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(2)`);
-      root.setProperty('--box-rim', '0 3px 12px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)');
+      root.setProperty('--box-rim', '0 3px 12px rgba(0,0,0,.12), 0 2px 8px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)');
       const [ir2, ig2, ib2] = (() => { const n = parseInt((s.chromeInk || '#000000').slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; })();
       root.setProperty('--box-border-color', `rgba(${ir2}, ${ig2}, ${ib2}, 0.1)`);
       const dispMap = document.querySelector('#glass-distortion feDisplacementMap');

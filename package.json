@@ -1,0 +1,39 @@
+{
+  "name": "missive-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Missive 桌面版",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.aeterlilis.missive",
+    "productName": "Missive",
+    "files": [
+      "electron/**/*",
+      "server/**/*",
+      "web/**/*",
+      "!server/.env",
+      "!server/.env.example",
+      "!server/settings.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "Missive-Portable.exe"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}

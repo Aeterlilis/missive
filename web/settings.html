@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" href="icon.svg" />
+  <title>Missive · 设置</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="back" href="index.html">← 返回日记</a>
+      <h1>设置</h1>
+      <a class="back" href="history.html">历史记录 →</a>
+    </header>
+
+    <form id="form">
+      <section>
+        <h2>API 配置</h2>
+        <div class="profile-row">
+          <select id="profileSelect"></select>
+          <button type="button" id="addProfile" class="secondary small">＋ 新建配置</button>
+          <button type="button" id="deleteProfile" class="secondary small">删除此配置</button>
+        </div>
+        <label>
+          <span>配置名称</span>
+          <input type="text" id="profileName" placeholder="例如：小马中转 / OpenAI官方" autocomplete="off" />
+        </label>
+        <label>
+          <span>API 基础 URL</span>
+          <input type="text" id="baseUrl" placeholder="https://xxx.com/v1" autocomplete="off" />
+        </label>
+        <label>
+          <span>API 密钥</span>
+          <input type="password" id="apiKey" placeholder="已设置，留空则不修改" autocomplete="off" />
+        </label>
+        <label>
+          <span>模型名称</span>
+          <div class="model-row">
+            <input type="text" id="model" list="modelList" placeholder="例如 gpt-5.4-low" autocomplete="off" />
+            <button type="button" id="fetchModels" class="secondary small">获取模型列表</button>
+          </div>
+          <datalist id="modelList"></datalist>
+          <span id="modelStatus" class="hint"></span>
+        </label>
+        <label>
+          <span>回答长度上限（token）</span>
+          <input type="number" id="maxTokens" min="40" max="2000" step="10" />
+        </label>
+      </section>
+
+      <section>
+        <h2>提示词卡片</h2>
+        <p class="hint">分四类管理发给AI的各种提示词，每张卡片能单独开关；最终发给AI的是所有"开着"的卡片内容拼在一起。</p>
+
+        <div class="card-category">
+          <h3>AI 人设</h3>
+          <div class="card-list" data-list="ai_persona"></div>
+          <button type="button" class="secondary small" data-add="ai_persona">＋ 新建卡片</button>
+        </div>
+        <div class="card-category">
+          <h3>用户人设</h3>
+          <div class="card-list" data-list="user_persona"></div>
+          <button type="button" class="secondary small" data-add="user_persona">＋ 新建卡片</button>
+        </div>
+        <div class="card-category">
+          <h3>长期记忆</h3>
+          <p class="hint">通常由下面"重置对话"时自动生成，也可以自己手写。</p>
+          <div class="card-list" data-list="long_term_memory"></div>
+          <button type="button" class="secondary small" data-add="long_term_memory">＋ 新建卡片</button>
+        </div>
+        <div class="card-category">
+          <h3>其他提示词</h3>
+          <div class="card-list" data-list="other"></div>
+          <button type="button" class="secondary small" data-add="other">＋ 新建卡片</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>写字速度</h2>
+        <p class="hint">笔刷（预设/颜色/粗细）挪到写字页面了，点那边工具栏的 🖊 调，写着写着就能换，不用来回跑设置页。</p>
+        <div class="slider-row">
+          <span>慢</span>
+          <input type="range" id="speed" min="1" max="10" step="1" />
+          <span>快</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>发送方式</h2>
+        <label class="radio" style="margin-bottom:10px">
+          <input type="checkbox" id="autoSendEnabled" />
+          停笔后自动发送
+        </label>
+        <div class="slider-row">
+          <span>快</span>
+          <input type="range" id="autoSendSeconds" min="0.5" max="10" step="0.5" />
+          <span>慢</span>
+        </div>
+        <p class="hint">关掉的话，只能靠写字界面下方的"✓ 发送"按钮手动提交；两者其实可以同时用。</p>
+      </section>
+
+      <section>
+        <h2>AI回复停留时长</h2>
+        <div class="slider-row">
+          <span>短</span>
+          <input type="range" id="lingerSeconds" min="1" max="15" step="0.5" />
+          <span>长</span>
+        </div>
+        <p class="hint">AI回复写完之后、开始淡出之前，停在屏幕上给你看多久。</p>
+      </section>
+
+      <section>
+        <h2>AI回复淡出时长</h2>
+        <div class="slider-row">
+          <span>快</span>
+          <input type="range" id="fadeSeconds" min="0.3" max="8" step="0.1" />
+          <span>慢</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>防误触</h2>
+        <label class="radio">
+          <input type="checkbox" id="penOnly" />
+          只认笔，忽略手指/手掌触摸
+        </label>
+        <p class="hint">用笔写字时手掌搭在屏幕上会被当成触摸，如果老是误触发多余的笔画，开这个。开了之后手指就不能画了，只有笔能写。</p>
+      </section>
+
+      <section>
+        <h2>英文回答字体</h2>
+        <div class="radio-group">
+          <label class="radio"><input type="radio" name="font" value="pinyon" /> 花体连笔（Pinyon Script）</label>
+          <label class="radio"><input type="radio" name="font" value="medieval" /> 西幻哥特体（MedievalSharp）</label>
+          <label class="radio"><input type="radio" name="font" value="wenkai" /> 统一用文楷（中英文同一款）</label>
+        </div>
+      </section>
+
+      <section>
+        <h2>首屏提示文字</h2>
+        <p class="hint">刚打开、还没写字时页面中间显示的引导语。第一行正常大小，之后每行会变小变淡（换行请直接回车）。</p>
+        <textarea id="hintText" rows="2"></textarea>
+      </section>
+
+      <section>
+        <h2>纸张背景</h2>
+        <div class="radio-group">
+          <label class="radio"><input type="radio" name="theme" value="white" /> 纯白</label>
+          <label class="radio"><input type="radio" name="theme" value="kraft" /> 牛皮纸</label>
+          <label class="radio"><input type="radio" name="theme" value="parchment" /> 羊皮纸</label>
+          <label class="radio"><input type="radio" name="theme" value="lined" /> 横线笔记本</label>
+          <label class="radio"><input type="radio" name="theme" value="grid" /> 方格</label>
+          <label class="radio"><input type="radio" name="theme" value="custom" /> 自定义图片<span id="customBgStatus" class="hint" style="margin-left:6px"></span></label>
+        </div>
+        <input type="file" id="bgFile" accept="image/png,image/jpeg" style="margin-top:10px" />
+      </section>
+
+      <section>
+        <h2>对话上下文</h2>
+        <p class="hint">
+          AI 回复时会参考最近几轮写过的内容，当前记着 <b id="contextCount">-</b> 轮（最多 <span id="contextMax">10</span> 轮）。
+          想让它忘掉之前聊的、重新开始，点下面这个按钮。
+        </p>
+        <label class="radio" style="margin-bottom:10px">
+          <input type="checkbox" id="summarizeOnReset" checked />
+          重置前先让 AI 总结这段对话，存成"长期记忆"卡片
+        </label>
+        <button type="button" id="resetContext" class="secondary">重置对话（开启新的上下文）</button>
+      </section>
+
+      <div class="actions">
+        <button type="submit" id="save">保存设置</button>
+        <span id="status" class="status"></span>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="src/settings.js"></script>
+</body>
+</html>

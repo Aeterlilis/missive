@@ -1,8 +1,16 @@
 # 密钥文件 —— 绝对不能提交
 server/.env
+server/settings.json
+
+# 用户个人数据 —— 日记/对话历史、自定义背景图，不该进仓库
+server/history.json
+server/background.jpg
 
 # 依赖
 node_modules/
+
+# 桌面版构建产物（体积大，随时能重新 electron-builder 出来）
+dist/
 
 # 系统/编辑器文件
 .DS_Store

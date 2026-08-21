@@ -1,6 +1,6 @@
 {
-  "name": "墨问 ink-diary",
-  "short_name": "墨问",
+  "name": "Missive",
+  "short_name": "Missive",
   "description": "用笔在墨水屏上写字，日记会用一手手写体回应你",
   "start_url": "./",
   "scope": "./",

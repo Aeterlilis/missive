@@ -10,9 +10,8 @@ export const CONFIG = {
   ORACLE_PATIENCE_MS: 90000,
 
   // ─── 饮墨（淡掉用户字迹）────────────────────────
-  // 哈希溶解分段数 × 间隔 ≈ 总时长。调慢一点，让墨迹从容淡去
-  DRINK_STAGES: 14,
-  DRINK_INTERVAL_MS: 220,
+  // 手写不好精确拆成"一笔一笔"（字距不规律），整页一起拍快照做 alpha 渐变，简单稳定
+  DRINK_FADE_MS: 900,
 
   // ─── 思考（呼吸点）──────────────────────────────
   THINK_PULSE_MS: 600,
@@ -54,17 +53,44 @@ export const CONFIG = {
   LINGER_MAX_MS: 20000,
 
   // ─── 淡出 AI 回答 ───────────────────────────────
-  FADE_STAGES: 10,
-  FADE_INTERVAL_MS: 80,
+  // 整段回复的透明度随时间线性降到 0（一次性快照做 alpha 渐变），不是逐点擦除，
+  // 更像"淡入淡出"而不是"倒放书写"。时长可在设置里调。
+  FADE_DURATION_MS: 1500,
+
+  // ─── 字体 ───────────────────────────────────────
+  // 纯英文回答用的字体（含中文的一律用 LXGW WenKai）。运行时会被 /api/settings 的 font 覆盖。
+  LATIN_FONT: 'Pinyon Script',
 
   // ─── 笔 ─────────────────────────────────────────
   // 压感低于此值不算在写（移植自 riddle 的 40/4096）
   PEN_PRESSURE_FLOOR: 0.01,
-  // 笔迹线条基础半径
+  // 笔迹线条基础半径（画单点时用，正常连笔走 perfect-freehand 的 size）
   INK_RADIUS: 2,
+  // 当前笔刷（运行时被 /api/settings 的 brush 覆盖）
+  INK_COLOR: '#000000',
+  BRUSH_SIZE: 7,
+  BRUSH_PRESET_NAME: 'pen',
+  BRUSH_PARAMS: { thinning: 0.6, smoothing: 0.5, streamline: 0.5, alpha: 1 }, // preset 决定的手感
+
+  // ─── 自动发送 ─────────────────────────────────────
+  // 是否启用"停笔几秒自动发送"；关掉的话只能靠手动点发送按钮。运行时被 /api/settings 覆盖。
+  AUTO_SEND_ENABLED: true,
+
+  // 防误触：只认笔，手指/手掌触摸一律忽略。运行时被 /api/settings 覆盖。
+  PEN_ONLY: false,
 
   // ─── 主循环 ─────────────────────────────────────
   LOOP_TICK_MS: 16, // 约 60fps 的逻辑 tick（实际绘制按各自时序）
+};
+
+// 笔刷预设：每种笔各带一套默认粗细/手感/透明度，切预设时粗细跟着变，不然感觉不出区别。
+// defaultSize 只在切换预设时用来自动填充粗细滑块，用户改了之后就按用户的来。
+export const BRUSH_PRESETS = {
+  pen: { defaultSize: 6, thinning: 0.5, smoothing: 0.5, streamline: 0.5, alpha: 1 },
+  ballpoint: { defaultSize: 4, thinning: 0.15, smoothing: 0.3, streamline: 0.4, alpha: 1 },
+  // 马克笔：明显更粗 + 半透明，笔画交叠的地方会自然叠深，跟真马克笔一样
+  marker: { defaultSize: 18, thinning: 0.05, smoothing: 0.6, streamline: 0.6, alpha: 0.55 },
+  brush: { defaultSize: 10, thinning: 0.85, smoothing: 0.6, streamline: 0.35, alpha: 1 },
 };
 
 // 颜色：墨水屏只认纯黑白，不要灰度（残影重）

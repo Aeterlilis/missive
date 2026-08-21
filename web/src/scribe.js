@@ -30,7 +30,10 @@ export class Scribe {
     if (document.fonts && document.fonts.load) {
       try {
         await Promise.race([
-          document.fonts.load(`64px "LXGW WenKai"`),
+          Promise.all([
+            document.fonts.load(`64px "LXGW WenKai"`),
+            document.fonts.load(`64px "${CONFIG.LATIN_FONT}"`),
+          ]),
           new Promise((_, rej) => setTimeout(() => rej(new Error('字体加载超时')), 5000)),
         ]);
       } catch (e) {
@@ -50,7 +53,8 @@ export class Scribe {
     const cw = this.ctx.canvas.width;
     const ch = this.ctx.canvas.height;
     const L = CONFIG.layout(cw, ch);
-    const wrapped = wrapText(this._octx, text, L.fontPx, cw - 2 * L.marginX);
+    const fontFamily = pickFontFamily(text);
+    const wrapped = wrapText(this._octx, text, L.fontPx, cw - 2 * L.marginX, fontFamily);
     let y = startY;
     for (const line of wrapped) {
       // 底部越界检查：如果这行会超出可用区域，停止追加（不再往下写）
@@ -58,7 +62,7 @@ export class Scribe {
         this.done = false;
         return text.length;
       }
-      const placed = this._layoutLine(line.text, y, line.width, L);
+      const placed = this._layoutLine(line.text, y, line.width, L, fontFamily);
       y = placed.nextY;
       this.lines.push(placed);
     }
@@ -67,7 +71,7 @@ export class Scribe {
   }
 
   // 渲染一行文字 → 细化 → trace，把折线加入 this.ink
-  _layoutLine(text, y, textWidth, L) {
+  _layoutLine(text, y, textWidth, L, fontFamily) {
     const px = L.fontPx;
     // 离屏画一整行
     const W = Math.ceil(textWidth) + 2;
@@ -78,7 +82,7 @@ export class Scribe {
     oc.fillRect(0, 0, W, H);
     oc.fillStyle = '#000';
     oc.textBaseline = 'top';
-    oc.font = `${px}px "LXGW WenKai", serif`;
+    oc.font = `${px}px "${fontFamily}", serif`;
     oc.fillText(text, 1, 1);
 
     const img = oc.getImageData(0, 0, W, H);
@@ -107,7 +111,8 @@ export class Scribe {
     const budget = CONFIG.SCRIBE_POINTS_PER_FRAME;
     const r = CONFIG.INK_RADIUS;
     let written = 0;
-    ctx.fillStyle = '#000';
+    ctx.globalAlpha = 1; // AI 回复始终不透明，不受用户笔刷透明度影响
+    ctx.fillStyle = CONFIG.INK_COLOR;
     while (written < budget && this.inkIdx < this.ink.length) {
       const p = this.ink[this.inkIdx++];
       if (p === BREAK) { written++; continue; } // 提笔间隙占一个预算
@@ -122,7 +127,24 @@ export class Scribe {
     return this.done;
   }
 
-  // 取所有已写文字的包围盒（供 dissolve 淡出定位）
+  // 把 ink 按 BREAK 切成一段段（对应 trace() 出来的每条骨架折线），保持书写顺序。
+  // "倒放"淡出要用：AI 是怎么一笔一笔写的，这里就原样切出那些"笔画"来。
+  getSegments() {
+    const segments = [];
+    let cur = [];
+    for (const p of this.ink) {
+      if (p === BREAK) {
+        if (cur.length > 0) segments.push(cur);
+        cur = [];
+      } else {
+        cur.push(p);
+      }
+    }
+    if (cur.length > 0) segments.push(cur);
+    return segments;
+  }
+
+  // 取所有已写文字的包围盒（供淡出定位）
   replyBBox() {
     if (this.lines.length === 0) return null;
     let minY = Infinity, maxY = -Infinity;
@@ -164,10 +186,22 @@ function innerWidth() {
   return window.innerWidth;
 }
 
+// ─── 字体选择 ───────────────────────────────────────────────
+// 纯英文（不含中文）用设置里选的字体，含中文的一律用文楷。
+function pickFontFamily(text) {
+  return hasCjk(text) ? 'LXGW WenKai' : CONFIG.LATIN_FONT;
+}
+function hasCjk(text) {
+  for (const ch of text) {
+    if (isCjk(ch.codePointAt(0))) return true;
+  }
+  return false;
+}
+
 // ─── 文本换行 ───────────────────────────────────────────────
 // 按可见宽度把长文本拆成多行。中文按字、英文按词。
-function wrapText(ctx, text, px, maxWidth) {
-  ctx.font = `${px}px "LXGW WenKai", serif`;
+function wrapText(ctx, text, px, maxWidth, fontFamily) {
+  ctx.font = `${px}px "${fontFamily}", serif`;
   const lines = [];
   let current = '';
   let currentWidth = 0;
@@ -320,7 +354,9 @@ export function trace(mask, w, h) {
   };
 
   const strokes = [];
-  const minLen = 3;
+  // 之前是 3：字里的点（问号的点、"得"这种字里的短点）细化完往往只剩 1~2 个像素，
+  // 连不成"线"，会被当成"碎线"筛掉——改成 1，孤立的点也能正常写出来。
+  const minLen = 1;
 
   // 先从端点（度=1）起步
   for (let y = 0; y < h; y++) {

@@ -92,6 +92,39 @@ export async function postInterpret(blob) {
   throw lastErr || new Error('多次重试后仍失败');
 }
 
+// 打字模式：把文字 POST 到 /interpret-text（JSON body），返回值和 postInterpret 一样是流式 reader
+export async function postInterpretText(text) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/interpret-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        lastErr = new Error(`后端返回 ${res.status}: ${detail.slice(0, 120)}`);
+        if ((res.status === 403 || res.status >= 500) && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 600 * attempt));
+          continue;
+        }
+        throw lastErr;
+      }
+      if (!res.body) throw new Error('后端未返回流');
+      return res.body;
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 600 * attempt));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr || new Error('多次重试后仍失败');
+}
+
 // 取所有笔画的轴对齐包围盒
 function boundingBox(strokes) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;

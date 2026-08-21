@@ -234,7 +234,7 @@ function applyGlassIntensity(mode) {
   const root = document.documentElement.style;
   if (mode === 'enhanced') {
     const distortion = GLASS_DISTORTION_SUPPORTED ? 'url(#glass-distortion) ' : '';
-    root.setProperty('--box-blur', `${distortion}blur(6px) saturate(2)`);
+    root.setProperty('--box-blur', `${distortion}blur(6px) saturate(1.35)`);
     root.setProperty('--box-rim', GLASS_RIM);
     tuneDistortionScale();
   } else {

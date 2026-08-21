@@ -44,7 +44,7 @@ function applyChromeTheme(s) {
   if (s.glassIntensity === 'enhanced') {
     let supportsDistortion = false;
     try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
-    root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(2)`);
+    root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(1.35)`);
     root.setProperty('--box-rim', '0 3px 12px rgba(0,0,0,.12), 0 2px 8px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)');
     const dispMap = document.querySelector('#glass-distortion feDisplacementMap');
     if (dispMap) dispMap.setAttribute('scale', window.matchMedia('(pointer: coarse)').matches ? '35' : '14');

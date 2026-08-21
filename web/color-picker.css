@@ -23,7 +23,12 @@
   padding: 3px 10px; font-size: 12px; cursor: pointer; opacity: 0.55;
 }
 .color-mode-tab:hover { opacity: 0.85; }
-.color-mode-tab.active { opacity: 1; background: var(--accent, #000); color: var(--accent-contrast, #fff); }
+.color-mode-tab.active {
+  opacity: 1;
+  background: var(--accent, #000);
+  background: color-mix(in srgb, var(--accent, #000) 85%, transparent);
+  color: var(--accent-contrast, #fff);
+}
 
 .color-picker-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 162px; }
 .color-mode-square { display: flex; flex-direction: column; gap: 6px; }

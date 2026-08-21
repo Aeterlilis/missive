@@ -185,7 +185,12 @@ body.theme-black #hint { color: #fff; }
   opacity: 0.55;
 }
 .brush-presets button:hover { opacity: 0.85; }
-.brush-presets button.active { opacity: 1; background: var(--accent, #000); color: var(--accent-contrast, #fff); }
+.brush-presets button.active {
+  opacity: 1;
+  background: var(--accent, #000);
+  background: color-mix(in srgb, var(--accent, #000) 85%, transparent);
+  color: var(--accent-contrast, #fff);
+}
 .brush-controls { display: flex; align-items: center; gap: 10px; }
 .brush-controls input[type="range"] { flex: 1; }
 

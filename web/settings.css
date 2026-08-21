@@ -252,7 +252,14 @@ textarea {
   min-height: 40px;
 }
 .option-pill:hover { opacity: 0.8; }
-.option-pill.active { opacity: 1; background: var(--accent); color: var(--accent-contrast); }
+.option-pill.active {
+  opacity: 1;
+  background: var(--accent); /* 不支持 color-mix() 的浏览器用这个兜底，纯色总比没有强 */
+  /* 选中态原来是纯色主题色，把玻璃元素自己的模糊/折射全盖住了——留一点透明度，
+     玻璃感才不会被选中状态整个吃掉 */
+  background: color-mix(in srgb, var(--accent) 85%, transparent);
+  color: var(--accent-contrast);
+}
 
 .option-pill-custom {
   background-size: cover;

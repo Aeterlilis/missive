@@ -49,6 +49,8 @@ function createApp() {
       chromeInk: s.chromeInk,
       chromeBox: s.chromeBox,
       chromeBoxAlpha: s.chromeBoxAlpha,
+      chromeBorder: s.chromeBorder,
+      chromeBorderAlpha: s.chromeBorderAlpha,
       glassIntensity: s.glassIntensity,
       hasCustomBackground: fs.existsSync(BACKGROUND_PATH),
       cjkFont: s.cjkFont,
@@ -196,6 +198,12 @@ function createApp() {
     }
     if (typeof body.chromeBoxAlpha === 'number' && body.chromeBoxAlpha > 0) {
       next.chromeBoxAlpha = Math.max(0.1, Math.min(1, body.chromeBoxAlpha));
+    }
+    if (typeof body.chromeBorder === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeBorder)) {
+      next.chromeBorder = body.chromeBorder.toLowerCase();
+    }
+    if (typeof body.chromeBorderAlpha === 'number' && body.chromeBorderAlpha > 0) {
+      next.chromeBorderAlpha = Math.max(0.05, Math.min(1, body.chromeBorderAlpha));
     }
     if (['standard', 'enhanced'].includes(body.glassIntensity)) next.glassIntensity = body.glassIntensity;
     if (['default', 'liujian', 'zhimang', 'notoserif', 'chunfeng', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;

@@ -8,7 +8,7 @@
 /* 一次"对话"一张卡：默认只显示头部（首页缩略图+日期+页数），点开才展开这次对话写的所有页。
    跟设置页的 .card 一样是"外层大框"，要玻璃效果；条目本身没有嵌套输入框那种"内层小框"问题。 */
 .conv-card {
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   margin-bottom: 14px;
   overflow: hidden;
@@ -32,7 +32,7 @@
   height: 52px;
   object-fit: contain;
   background: var(--box-solid);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   flex-shrink: 0;
 }
@@ -66,7 +66,7 @@
   height: 44px;
   object-fit: contain;
   background: var(--box-solid);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -95,7 +95,7 @@
 
 .entry-detail img {
   max-width: 100%;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   margin-bottom: 10px;
   background: var(--box-solid);

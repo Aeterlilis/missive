@@ -259,7 +259,7 @@
             <span>实</span>
           </div>
 
-          <h3 style="margin-top:16px">文字/边框颜色</h3>
+          <h3 style="margin-top:16px">文字颜色</h3>
           <div id="chrome-ink-presets" class="color-presets">
             <button type="button" class="color-swatch" data-color="#000000" title="纯黑" style="background:#000000"></button>
             <button type="button" class="color-swatch" data-color="#ffffff" title="纯白" style="background:#ffffff"></button>
@@ -279,6 +279,36 @@
               <span id="chrome-ink-color-preview" class="color-swatch"></span>
               <input type="text" id="chrome-ink-color-hex" class="color-hex-input" maxlength="7" spellcheck="false" />
             </div>
+          </div>
+
+          <h3 style="margin-top:16px">边框颜色</h3>
+          <p class="hint">跟文字颜色是分开的两个东西——比如想把边框调淡一点，不会连文字一起变淡看不清。</p>
+          <div id="chrome-border-presets" class="color-presets">
+            <button type="button" class="color-swatch" data-color="#000000" title="纯黑" style="background:#000000"></button>
+            <button type="button" class="color-swatch" data-color="#ffffff" title="纯白" style="background:#ffffff"></button>
+            <button type="button" id="btn-chrome-border-custom-color" class="color-swatch color-swatch-custom" title="自定义颜色"></button>
+          </div>
+          <div id="chrome-border-color-panel" class="color-picker-panel hidden">
+            <div class="color-mode-tabs">
+              <button type="button" class="color-mode-tab active" data-mode="square">HSB</button>
+              <button type="button" class="color-mode-tab" data-mode="wheel">色环</button>
+            </div>
+            <div id="chrome-border-color-mode-square" class="color-mode-square">
+              <canvas id="chrome-border-color-sv" width="160" height="90"></canvas>
+              <canvas id="chrome-border-color-hue" width="160" height="14"></canvas>
+            </div>
+            <canvas id="chrome-border-color-wheel" width="160" height="160" class="color-wheel hidden"></canvas>
+            <div class="color-panel-row">
+              <span id="chrome-border-color-preview" class="color-swatch"></span>
+              <input type="text" id="chrome-border-color-hex" class="color-hex-input" maxlength="7" spellcheck="false" />
+            </div>
+          </div>
+
+          <h3 style="margin-top:16px">边框透明度</h3>
+          <div class="slider-row">
+            <span>透</span>
+            <input type="range" id="chromeBorderAlpha" min="0.05" max="1" step="0.05" />
+            <span>实</span>
           </div>
         </div>
       </section>

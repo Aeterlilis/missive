@@ -99,7 +99,7 @@ body.theme-black #hint { color: #fff; }
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   color: var(--ink);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   border-radius: 50%;
   display: flex;
@@ -155,7 +155,7 @@ body.theme-black #hint { color: #fff; }
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   border-radius: 10px;
   padding: 10px 12px;
@@ -176,7 +176,7 @@ body.theme-black #hint { color: #fff; }
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   color: var(--ink);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   border-radius: 14px;
   padding: 5px 10px;
@@ -228,7 +228,7 @@ body.theme-black #hint { color: #fff; }
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   color: var(--ink);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   border-radius: 20px;
   padding: 8px 16px;

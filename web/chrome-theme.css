@@ -3,10 +3,13 @@
    （见 settings.js 的 applyChromeTheme，app.js/history.js 各有一份小号同款），
    这里只是没读到设置前的默认值，避免闪一下没样式的白屏。
    --box-bg 是半透明的（卡片/面板底色，颜色+透明度都可调）；--box-solid 是同一个颜色但不透明，
-   给缩略图底板、按钮悬浮反色这类必须不透明的地方用。--ink-faint 同理是 --ink 的极淡版，给细分隔线用。 */
+   给缩略图底板、按钮悬浮反色这类必须不透明的地方用。--ink-faint 同理是 --ink 的极淡版，给细分隔线用。
+   --ink 只管文字/图标颜色；--border-color 单独管所有边框颜色（颜色+透明度也都可调）——
+   两个故意拆开，不然边框调淡了文字也会跟着变淡看不清，见 settings.js 的 applyBorderColor。 */
 :root {
   --ink: #000000;
   --ink-faint: rgba(0, 0, 0, 0.15);
+  --border-color: #000000;
   --box-bg: rgba(255, 255, 255, 0.55);
   --box-solid: #ffffff;
   /* 毛玻璃：模糊+提高饱和度，垫在半透明底色下面的纸张纹理透出来的时候不再是纯色块，
@@ -19,8 +22,9 @@
      具体逻辑和"支持就用，不支持就退回普通模糊"的判断在 settings.js 的 applyGlassIntensity。 */
   --box-blur: blur(16px) saturate(1.6);
   --box-rim: none;
-  /* "更透亮"档专用：边缘不再靠 border 那条实线撑轮廓，而是把 border 的颜色本身也调淡
-     （--box-border-color），改由 --box-rim 的内阴影高光/暗角 + 外层浮起的软阴影来表达轮廓——
-     这样才有玻璃感，实线描边太"死"，标准档还是走 --ink 那条实线。 */
-  --box-border-color: var(--ink);
+  /* 玻璃元素的边框颜色（history.css/settings.css/color-picker.css 里那些 border-color 声明用的
+     是这个，不是直接用 --border-color）。曾经在"更透亮"档会自动淡化，现在边框透明度完全交给
+     用户自己在设置页调（见 applyBorderColor），这里就是原样等于 --border-color，留这层间接
+     只是为了以后如果还要给玻璃元素单独覆盖边框颜色，不用再去改 17 处 CSS。 */
+  --box-border-color: var(--border-color);
 }

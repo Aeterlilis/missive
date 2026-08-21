@@ -17,28 +17,32 @@ function applyTheme(theme, bgColor) {
     document.body.classList.add('theme-' + theme);
   }
 }
-// 界面配色（日夜主题）：卡片/缩略图这些框框的底色+文字颜色，逻辑跟设置页 applyChromeTheme 一样
+// 界面配色（日夜主题）：卡片/缩略图这些框框的底色+文字颜色+边框颜色，
+// 逻辑跟设置页 applyChromeTheme/applyBorderColor 一样——文字和边框故意拆成两个独立颜色。
 function applyChromeTheme(s) {
   const ink = s.chromeInk || '#000000';
   const boxHex = s.chromeBox || '#ffffff';
   const alpha = typeof s.chromeBoxAlpha === 'number' ? s.chromeBoxAlpha : 0.55;
+  const borderHex = s.chromeBorder || '#000000';
+  const borderAlpha = typeof s.chromeBorderAlpha === 'number' ? s.chromeBorderAlpha : 1;
   const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
   const [ir, ig, ib] = hexToRgb(ink);
   const [br, bg, bb] = hexToRgb(boxHex);
+  const [bdr, bdg, bdb] = hexToRgb(borderHex);
   const root = document.documentElement.style;
   root.setProperty('--ink', ink);
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--box-solid', boxHex);
-  // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+外阴影+边缘高光/暗角+淡边框，逻辑跟设置页
-  // applyGlassIntensity 一样。折射扭曲强度桌面鼠标端和触屏端观感差很多，用 pointer:coarse
-  // 粗分一下，给桌面端弱得多的 scale，不然桌面上会糊成波浪。
+  root.setProperty('--border-color', `rgba(${bdr}, ${bdg}, ${bdb}, ${borderAlpha})`);
+  // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+外阴影+边缘高光/暗角，逻辑跟设置页
+  // applyGlassIntensity 一样（边框颜色/透明度是独立的 --border-color，见上面，这里不用管）。
+  // 折射扭曲强度桌面鼠标端和触屏端观感差很多，用 pointer:coarse 粗分一下，桌面给弱得多的 scale。
   if (s.glassIntensity === 'enhanced') {
     let supportsDistortion = false;
     try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
     root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(2)`);
     root.setProperty('--box-rim', '0 3px 12px rgba(0,0,0,.12), 0 2px 8px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)');
-    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.1)`);
     const dispMap = document.querySelector('#glass-distortion feDisplacementMap');
     if (dispMap) dispMap.setAttribute('scale', window.matchMedia('(pointer: coarse)').matches ? '35' : '14');
   }

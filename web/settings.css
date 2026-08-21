@@ -45,7 +45,7 @@ html { scroll-behavior: smooth; }
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   color: var(--ink);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   border-radius: 50%;
   display: flex;
@@ -73,7 +73,7 @@ header {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-color);
   border-color: var(--box-border-color);
 }
 h1 { font-size: 18px; font-weight: 600; flex: 1; }
@@ -91,7 +91,7 @@ h1 { font-size: 18px; font-weight: 600; flex: 1; }
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   touch-action: manipulation;
 }
@@ -171,7 +171,7 @@ input[type="number"],
 textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   font-size: 14px;
   font-family: inherit;
@@ -191,7 +191,7 @@ textarea {
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   color: var(--ink);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-color: var(--box-border-color);
   border-radius: 999px;
   padding: 8px 18px;
@@ -221,7 +221,7 @@ textarea {
   align-items: center;
   justify-content: center;
   text-align: center;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 10px 8px;
   font-size: 13px;
@@ -251,7 +251,7 @@ textarea {
 /* 桌面版专属：从系统字体库选，隐藏在 window.electronAPI 存在的时候才显示 */
 .cjk-font-electron-row { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
 .cjk-font-electron-row select {
-  flex: 1; border: 1px solid var(--ink); border-radius: 12px; padding: 8px 10px;
+  flex: 1; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 10px;
   font-size: 13px; background: var(--box-bg); color: var(--ink);
 }
 
@@ -288,7 +288,7 @@ textarea {
   position: absolute;
   inset: 0;
   background: var(--box-bg);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 999px;
   transition: background 0.15s;
 }
@@ -319,7 +319,7 @@ textarea {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
@@ -348,7 +348,7 @@ textarea {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
@@ -367,7 +367,7 @@ textarea {
 /* ─── 单张卡片：预览态只显示标题+摘要信息，点了才变成可编辑 ─── */
 .card {
   position: relative;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 14px 16px 48px;
   background: var(--box-bg);
@@ -393,7 +393,7 @@ textarea {
 }
 .card-title-input:read-only { pointer-events: none; }
 .card.editing .card-title-input {
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--border-color);
   pointer-events: auto;
 }
 
@@ -403,7 +403,7 @@ textarea {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--border-color);
   background: var(--box-bg);
   display: flex;
   align-items: center;
@@ -478,7 +478,7 @@ textarea {
     overflow-x: visible;
     overflow-y: auto;
     border-bottom: none;
-    border-right: 1px solid var(--ink);
+    border-right: 1px solid var(--border-color);
     padding: 14px 12px;
   }
   #settings-nav a { border-bottom: none; border-left: 2px solid transparent; padding: 8px 0 8px 10px; }

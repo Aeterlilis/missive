@@ -9,9 +9,11 @@ let data = null;             // 最近一次从服务器拉到的完整设置
 let currentProfileId = null; // 当前"待启用"的配置槽位（真正生效要点保存）
 let themeColorHex = '#000000'; // 开关/滑块的统一主题色
 let bgColorHex = '#ffffff';    // 纸张背景选"纯色"时用的颜色
-let chromeInkHex = '#000000';  // 界面配色：文字/边框颜色
+let chromeInkHex = '#000000';  // 界面配色：文字颜色
 let chromeBoxHex = '#ffffff';  // 界面配色：所有卡片/面板/按钮的底色（配合下面的透明度）
 let chromeBoxAlpha = 0.55;     // 界面配色：底色的透明度
+let chromeBorderHex = '#000000'; // 界面配色：边框颜色，跟文字颜色分开算——调淡边框不会连文字一起变淡
+let chromeBorderAlpha = 1;       // 界面配色：边框透明度
 
 function setStatus(text, isError) {
   statusEl.textContent = text;
@@ -145,8 +147,8 @@ function applyThemeColor(hex) {
 }
 
 const CHROME_PRESETS = {
-  day: { ink: '#000000', box: '#ffffff', alpha: 0.55 },
-  night: { ink: '#ffffff', box: '#000000', alpha: 0.55 },
+  day: { ink: '#000000', box: '#ffffff', alpha: 0.55, border: '#000000', borderAlpha: 1 },
+  night: { ink: '#ffffff', box: '#000000', alpha: 0.55, border: '#ffffff', borderAlpha: 1 },
 };
 
 function hexToRgbTriplet(hex) {
@@ -154,9 +156,7 @@ function hexToRgbTriplet(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-let glassMode = 'standard'; // 'standard' | 'enhanced' —— applyChromeTheme 改 ink 的时候要知道当前是哪档，才能同步更新边框颜色
-
-// 界面配色：所有"框框"共用的底色（颜色+透明度）和文字/边框色。
+// 界面配色：所有"框框"共用的底色（颜色+透明度）和文字颜色。
 // --box-solid/--ink-faint 是从这两个值派生出来的，给缩略图底板、按钮悬浮反色、细分隔线这些
 // 必须用不透明色/极淡色的地方用，见 chrome-theme.css 顶部注释。
 function applyChromeTheme(ink, boxHex, alpha) {
@@ -170,7 +170,16 @@ function applyChromeTheme(ink, boxHex, alpha) {
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--box-solid', boxHex);
-  refreshBoxBorderColor();
+}
+
+// 边框颜色跟文字颜色是分开的两套（用户明确要求：调淡边框不该连文字一起变淡看不清）。
+// --border-color 是所有框框边框共用的那个变量（颜色+透明度都在这算成一个 rgba），玻璃/非玻璃
+// 的框框都直接读它——想要"更透亮"档那种若隐若现的淡边框，把这个透明度调低就行，不再是自动的。
+function applyBorderColor(hex, alpha) {
+  chromeBorderHex = hex;
+  chromeBorderAlpha = alpha;
+  const [r, g, b] = hexToRgbTriplet(hex);
+  document.documentElement.style.setProperty('--border-color', `rgba(${r}, ${g}, ${b}, ${alpha})`);
 }
 
 function syncChromeCustomVisibility(mode) {
@@ -193,18 +202,6 @@ function tuneDistortionScale() {
   map.setAttribute('scale', coarse ? '35' : '14');
 }
 
-// "更透亮"档的边框不再靠实线撑轮廓，改成 ink 的极淡版（跟 --ink-faint 一个思路，但透明度更低），
-// 让 --box-rim 的内阴影高光/暗角去表达边缘。ink 颜色变了、或者玻璃档位切换了，都要重新算一遍。
-function refreshBoxBorderColor() {
-  const root = document.documentElement.style;
-  if (glassMode === 'enhanced') {
-    const [ir, ig, ib] = hexToRgbTriplet(chromeInkHex);
-    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.1)`);
-  } else {
-    root.setProperty('--box-border-color', 'var(--ink)');
-  }
-}
-
 // PS 那套"斜面浮雕+内阴影+内发光+叠光泽+投影"图层样式的 CSS 翻译，几层 box-shadow 叠起来：
 // 外层投影负责浮起来的感觉；两道极窄的内嵌高光/暗角是斜面的硬边转折（贴着轮廓，不模糊）；
 // 内发光是不分方向、整圈都有的一层亮，对应"整个轮廓都透光，背光面也会反光"；内阴影用更大的
@@ -216,7 +213,6 @@ const GLASS_RIM = '0 3px 12px rgba(0,0,0,.12), 0 2px 8px rgba(255,255,255,.3), i
 // 边框淡到几乎看不见、换 GLASS_RIM 那一叠阴影/高光表达轮廓，支持的话再叠一层真正的折射扭曲，
 // 几样加起来才是用户说的"不是随便糊了个模糊"的液态玻璃感。
 function applyGlassIntensity(mode) {
-  glassMode = mode;
   const root = document.documentElement.style;
   if (mode === 'enhanced') {
     const distortion = GLASS_DISTORTION_SUPPORTED ? 'url(#glass-distortion) ' : '';
@@ -227,7 +223,6 @@ function applyGlassIntensity(mode) {
     root.setProperty('--box-blur', 'blur(16px) saturate(1.6)');
     root.setProperty('--box-rim', 'none');
   }
-  refreshBoxBorderColor();
 }
 
 // 通用 HSB方形/色环 选色盘——主题色跟纸张纯色背景共用同一份实现，靠 ids/presetsSelector 挂到不同的 DOM 上。
@@ -955,6 +950,11 @@ async function load() {
     chromeBoxColorPicker.setHex(chromeBoxHex);
     chromeInkColorPicker.setHex(chromeInkHex);
     $('chromeBoxAlpha').value = chromeBoxAlpha;
+    chromeBorderHex = data.chromeBorder || chromeDefaults.border;
+    chromeBorderAlpha = typeof data.chromeBorderAlpha === 'number' ? data.chromeBorderAlpha : chromeDefaults.borderAlpha;
+    applyBorderColor(chromeBorderHex, chromeBorderAlpha);
+    chromeBorderColorPicker.setHex(chromeBorderHex);
+    $('chromeBorderAlpha').value = chromeBorderAlpha;
     syncChromeCustomVisibility(chromeTheme);
 
     const glassIntensity = data.glassIntensity || 'standard';
@@ -1117,6 +1117,8 @@ async function saveAll() {
         chromeInk: chromeInkHex,
         chromeBox: chromeBoxHex,
         chromeBoxAlpha: chromeBoxAlpha,
+        chromeBorder: chromeBorderHex,
+        chromeBorderAlpha: chromeBorderAlpha,
         glassIntensity: glassPills.getActive() || 'standard',
         cjkFont: cjkFontPills.getActive(),
         autoSendEnabled: $('autoSendEnabled').checked,
@@ -1186,22 +1188,39 @@ const chromeInkColorPicker = setupColorPicker({
   presetsSelector: '#chrome-ink-presets .color-swatch[data-color]',
   getInitial: () => chromeInkHex,
   onChange: (hex) => applyChromeTheme(hex, chromeBoxHex, chromeBoxAlpha),
-  statusMsg: '文字/边框颜色已更新，记得点保存',
+  statusMsg: '文字颜色已更新，记得点保存',
+});
+const chromeBorderColorPicker = setupColorPicker({
+  ids: {
+    panel: 'chrome-border-color-panel', sv: 'chrome-border-color-sv', hue: 'chrome-border-color-hue', wheel: 'chrome-border-color-wheel',
+    modeSquare: 'chrome-border-color-mode-square', preview: 'chrome-border-color-preview', hex: 'chrome-border-color-hex', customBtn: 'btn-chrome-border-custom-color',
+  },
+  presetsSelector: '#chrome-border-presets .color-swatch[data-color]',
+  getInitial: () => chromeBorderHex,
+  onChange: (hex) => applyBorderColor(hex, chromeBorderAlpha),
+  statusMsg: '边框颜色已更新，记得点保存',
 });
 $('chromeBoxAlpha').addEventListener('input', () => {
   applyChromeTheme(chromeInkHex, chromeBoxHex, parseFloat($('chromeBoxAlpha').value));
+});
+$('chromeBorderAlpha').addEventListener('input', () => {
+  applyBorderColor(chromeBorderHex, parseFloat($('chromeBorderAlpha').value));
 });
 const chromeThemePills = setupOptionPills('chromeTheme', (value) => {
   syncChromeCustomVisibility(value);
   if (value === 'custom') {
     applyChromeTheme(chromeInkHex, chromeBoxHex, chromeBoxAlpha);
+    applyBorderColor(chromeBorderHex, chromeBorderAlpha);
     return;
   }
   const p = CHROME_PRESETS[value];
   applyChromeTheme(p.ink, p.box, p.alpha);
+  applyBorderColor(p.border, p.borderAlpha);
   chromeBoxColorPicker.setHex(p.box);
   chromeInkColorPicker.setHex(p.ink);
+  chromeBorderColorPicker.setHex(p.border);
   $('chromeBoxAlpha').value = p.alpha;
+  $('chromeBorderAlpha').value = p.borderAlpha;
 }); // 点了就实时预览
 const glassPills = setupOptionPills('glassIntensity', applyGlassIntensity); // 点了就实时预览
 

@@ -21,11 +21,14 @@ body { position: relative; }
 
 /* 纸张主题背景画在这一层（见 paper-theme.css 的 #bg-fixed.theme-* 规则），position:fixed
    铺满视口、贴着 body 最底下——卡片展开、页面变长的时候它不跟着变，不会有背景被拉伸的错觉。
-   z-index 比下面的veil和内容都低，纯粹是背景。 */
+   z-index 特意写成 0 不是 -1：body 自己也有一层不透明白色背景，负数 z-index 的子元素会被
+   压到 body 自己的背景下面（这是个常见的 CSS 坑——body 的背景不受它子元素 stacking order
+   约束，负 z-index 反而藏到它后面去了），改成 0（配合 body::before/header/.wrap 等后面
+   内容都有 z-index:1 起步或更晚的 DOM 顺序）才会正确显示在 body 背景之上、内容之下。 */
 #bg-fixed {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
 }
 
 /* 整个页面盖一层半透明白，跟header/导航栏那层遮罩保持同一个不透明度，
@@ -40,7 +43,9 @@ body::before {
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   border-color: var(--box-border-color);
-  z-index: 0;
+  /* 得比 #bg-fixed(z-index:0) 高——::before 生成内容在 body 的子元素顺序里排最前面，
+     跟 #bg-fixed 同级的话反而会被排在它后面的 #bg-fixed 盖到下面去，遮罩就看不见了 */
+  z-index: 1;
   pointer-events: none;
 }
 

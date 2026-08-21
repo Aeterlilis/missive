@@ -174,6 +174,28 @@ function syncChromeCustomVisibility(mode) {
   $('chrome-theme-custom').classList.toggle('hidden', mode !== 'custom');
 }
 
+// 折射扭曲（url(#glass-distortion)）不是所有浏览器都支持，先探测一下，
+// 不支持就退回纯模糊——不然直接把 url() 塞进 backdrop-filter，在不认识它的浏览器上
+// 整条 backdrop-filter 会连模糊都一起失效，比啥都没有还难看。
+const GLASS_DISTORTION_SUPPORTED = (() => {
+  try { return CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch { return false; }
+})();
+
+// 玻璃强度："标准"就是 chrome-theme.css 里定义的默认值；"更透亮"把模糊调轻、饱和度调高，
+// 加一圈边缘高光/暗角（--box-rim），支持的话再叠一层真正的折射扭曲，三样加起来才是
+// 用户说的"不是随便糊了个模糊"的液态玻璃感。
+function applyGlassIntensity(mode) {
+  const root = document.documentElement.style;
+  if (mode === 'enhanced') {
+    const distortion = GLASS_DISTORTION_SUPPORTED ? 'url(#glass-distortion) ' : '';
+    root.setProperty('--box-blur', `${distortion}blur(6px) saturate(2)`);
+    root.setProperty('--box-rim', 'inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 1px rgba(0,0,0,.12)');
+  } else {
+    root.setProperty('--box-blur', 'blur(16px) saturate(1.6)');
+    root.setProperty('--box-rim', 'none');
+  }
+}
+
 // 通用 HSB方形/色环 选色盘——主题色跟纸张纯色背景共用同一份实现，靠 ids/presetsSelector 挂到不同的 DOM 上。
 // 跟写字页笔刷颜色（app.js）那套预设色块+方形/色环自定义面板也是完全同一套算法。
 function setupColorPicker({ ids, presetsSelector, getInitial, onChange, statusMsg }) {
@@ -901,6 +923,10 @@ async function load() {
     $('chromeBoxAlpha').value = chromeBoxAlpha;
     syncChromeCustomVisibility(chromeTheme);
 
+    const glassIntensity = data.glassIntensity || 'standard';
+    glassPills.setActive(glassIntensity);
+    applyGlassIntensity(glassIntensity);
+
     cjkFontPills.setActive(data.cjkFont || 'default');
     $('cjkFontCustomPill').textContent = data.hasCjkFont ? (data.cjkFontName || '自定义字体') : '上传字体文件';
 
@@ -1057,6 +1083,7 @@ async function saveAll() {
         chromeInk: chromeInkHex,
         chromeBox: chromeBoxHex,
         chromeBoxAlpha: chromeBoxAlpha,
+        glassIntensity: glassPills.getActive() || 'standard',
         cjkFont: cjkFontPills.getActive(),
         autoSendEnabled: $('autoSendEnabled').checked,
         autoSendSeconds: parseFloat($('autoSendSeconds').value) || 2.8,
@@ -1142,6 +1169,7 @@ const chromeThemePills = setupOptionPills('chromeTheme', (value) => {
   chromeInkColorPicker.setHex(p.ink);
   $('chromeBoxAlpha').value = p.alpha;
 }); // 点了就实时预览
+const glassPills = setupOptionPills('glassIntensity', applyGlassIntensity); // 点了就实时预览
 
 load();
 setupSectionNav();

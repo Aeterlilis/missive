@@ -97,6 +97,7 @@ body.theme-black #hint { color: #fff; }
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 50%;
@@ -152,6 +153,7 @@ body.theme-black #hint { color: #fff; }
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   border: 1px solid var(--ink);
   border-radius: 10px;
   padding: 10px 12px;
@@ -170,6 +172,7 @@ body.theme-black #hint { color: #fff; }
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 14px;
@@ -220,6 +223,7 @@ body.theme-black #hint { color: #fff; }
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 20px;

@@ -30,6 +30,13 @@ function applyChromeTheme(s) {
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--box-solid', boxHex);
+  // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+边缘高光，逻辑跟设置页 applyGlassIntensity 一样
+  if (s.glassIntensity === 'enhanced') {
+    let supportsDistortion = false;
+    try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
+    root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(2)`);
+    root.setProperty('--box-rim', 'inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 1px rgba(0,0,0,.12)');
+  }
 }
 fetch('/api/settings').then((r) => r.json()).then((s) => { applyTheme(s.theme, s.bgColor); applyChromeTheme(s); }).catch(() => {});
 

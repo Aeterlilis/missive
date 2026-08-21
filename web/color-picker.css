@@ -15,7 +15,8 @@
 .color-mode-tab {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
-  -webkit-backdrop-filter: var(--box-blur); color: var(--ink); border: 1px solid var(--ink); border-radius: 14px;
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim); color: var(--ink); border: 1px solid var(--ink); border-radius: 14px;
   padding: 3px 10px; font-size: 12px; cursor: pointer; opacity: 0.55;
 }
 .color-mode-tab:hover { opacity: 0.85; }

@@ -27,6 +27,7 @@ body::before {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   z-index: 0;
   pointer-events: none;
 }
@@ -41,6 +42,7 @@ html { scroll-behavior: smooth; }
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 50%;
@@ -68,6 +70,7 @@ header {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   border-bottom: 1px solid var(--ink);
 }
 h1 { font-size: 18px; font-weight: 600; flex: 1; }
@@ -84,6 +87,7 @@ h1 { font-size: 18px; font-weight: 600; flex: 1; }
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   border-bottom: 1px solid var(--ink);
   touch-action: manipulation;
 }
@@ -168,6 +172,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
 }
 
@@ -181,6 +186,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
   border-radius: 999px;
@@ -220,6 +226,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   color: var(--ink);
   min-height: 40px;
 }
@@ -275,6 +282,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   border: 1px solid var(--ink);
   border-radius: 999px;
   transition: background 0.15s;
@@ -310,6 +318,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   opacity: 0.6;
   cursor: pointer;
   display: flex;
@@ -336,6 +345,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
 }
 .card-stack.collapsed.has-more::before { transform: translateY(9px) scale(0.96); z-index: 0; }
 .card-stack.collapsed.has-more::after { transform: translateY(18px) scale(0.92); z-index: -1; }
@@ -354,6 +364,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
 }
 .card-head {
   display: flex;
@@ -385,6 +396,7 @@ textarea {
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
   display: flex;
   align-items: center;
   justify-content: center;

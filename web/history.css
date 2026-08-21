@@ -14,6 +14,7 @@
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
 }
 
 .conv-head {

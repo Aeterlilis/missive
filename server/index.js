@@ -182,7 +182,7 @@ function createApp() {
     if (typeof body.bgColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.bgColor)) {
       next.bgColor = body.bgColor.toLowerCase();
     }
-    if (['default', 'liujian', 'zhimang', 'notoserif', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
+    if (['default', 'liujian', 'zhimang', 'notoserif', 'chunfeng', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
     if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;
     if (typeof body.autoSendSeconds === 'number' && body.autoSendSeconds > 0) {
       next.autoSendSeconds = Math.max(0.5, Math.min(20, body.autoSendSeconds));

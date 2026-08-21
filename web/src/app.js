@@ -605,6 +605,7 @@ const CJK_FONT_MAP = {
   liujian: 'Liu Jian Mao Cao',
   zhimang: 'Zhi Mang Xing',
   notoserif: 'Noto Serif SC',
+  chunfeng: 'Chill ChunFeng',
 };
 
 const CUSTOM_CJK_FAMILY = 'MissiveCustomCJK'; // 不带空格，避免 canvas font 字符串里要不要加引号的麻烦

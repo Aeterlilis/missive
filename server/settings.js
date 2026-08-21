@@ -63,7 +63,7 @@ function defaultsWithProfile() {
     theme: 'solid', // solid(纯色，配 bgColor) | parchment | lined | grid | xuanzhi | watercolor | crumpled | black | custom
     themeColor: '#000000', // 开关/滑块这些控件的统一主题色
     bgColor: '#ffffff', // 纸张背景选"纯色"（theme:'solid'）时用的颜色
-    cjkFont: 'default', // default(霞鹜文楷) | liujian(草书连笔) | zhimang(行书体) | notoserif(宋体) | custom(自己传的字体)
+    cjkFont: 'default', // default(霞鹜文楷) | liujian(草书连笔) | zhimang(行书体) | notoserif(宋体) | chunfeng(春风楷书) | custom(自己传的字体)
     cjkFontExt: null,    // 存的自定义字体文件后缀（ttf/otf/ttc），没传过就是 null
     cjkFontName: '',     // 自定义字体的原始文件名，UI 显示用
     contextTurns: 10,     // 滚动上下文窗口大小

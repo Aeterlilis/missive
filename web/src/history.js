@@ -3,18 +3,20 @@
 const listEl = document.getElementById('list');
 const emptyHint = document.getElementById('emptyHint');
 
-// 背景跟写字页/设置页保持一致，用同一套 body.theme-* class（见 paper-theme.css）
+// 背景跟写字页/设置页保持一致，用同一套 theme-* class（见 paper-theme.css），画在 #bg-fixed
+// 这个 position:fixed 的层上而不是 body——列表变长的时候它不跟着动，不会像背景被拉伸
 const THEME_CLASSES = ['theme-parchment', 'theme-lined', 'theme-grid', 'theme-xuanzhi', 'theme-watercolor', 'theme-crumpled', 'theme-black', 'theme-custom'];
 function applyTheme(theme, bgColor) {
-  document.body.classList.remove(...THEME_CLASSES);
-  document.body.style.background = '';
+  const bgEl = document.getElementById('bg-fixed');
+  bgEl.classList.remove(...THEME_CLASSES);
+  bgEl.style.background = '';
   if (theme === 'custom') {
-    document.body.classList.add('theme-custom');
-    document.body.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+    bgEl.classList.add('theme-custom');
+    bgEl.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
   } else if (theme === 'solid') {
-    document.body.style.background = bgColor || '#ffffff';
+    bgEl.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
-    document.body.classList.add('theme-' + theme);
+    bgEl.classList.add('theme-' + theme);
   }
 }
 // 界面配色（日夜主题）：卡片/缩略图这些框框的底色+文字颜色+边框颜色，
@@ -33,6 +35,7 @@ function applyChromeTheme(s) {
   root.setProperty('--ink', ink);
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
+  root.setProperty('--veil-bg', `rgba(${br}, ${bg}, ${bb}, 0.25)`); // 整页遮罩透明度固定，跟底色透明度滑块脱钩
   root.setProperty('--box-solid', boxHex);
   root.setProperty('--border-color', `rgba(${bdr}, ${bdg}, ${bdb}, ${borderAlpha})`);
   // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+外阴影+边缘高光/暗角，逻辑跟设置页

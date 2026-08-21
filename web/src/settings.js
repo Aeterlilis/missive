@@ -21,19 +21,22 @@ function setStatus(text, isError) {
   if (text) setTimeout(() => { statusEl.textContent = ''; }, 3000);
 }
 
-// 背景跟写字页保持一致，用同一套 body.theme-* class（见 paper-theme.css）。
-// "纯色"（solid）不在这里——颜色是用户自己调的，直接内联 style，不走 class。
+// 背景跟写字页保持一致，用同一套 theme-* class（见 paper-theme.css），但画在 #bg-fixed 这个
+// position:fixed 的层上而不是 body——body 会随卡片展开变长，画在它上面 background-size:cover
+// 会跟着重新计算，看起来像背景被拉伸。"纯色"（solid）不在这里——颜色是用户自己调的，直接内联
+// style，不走 class。
 const THEME_CLASSES = ['theme-parchment', 'theme-lined', 'theme-grid', 'theme-xuanzhi', 'theme-watercolor', 'theme-crumpled', 'theme-black', 'theme-custom'];
 function applyTheme(theme, bgColor) {
-  document.body.classList.remove(...THEME_CLASSES);
-  document.body.style.background = ''; // 先清掉上一个主题可能留下的内联背景（自定义图片/纯色都是内联设的）
+  const bgEl = $('bg-fixed');
+  bgEl.classList.remove(...THEME_CLASSES);
+  bgEl.style.background = ''; // 先清掉上一个主题可能留下的内联背景（自定义图片/纯色都是内联设的）
   if (theme === 'custom') {
-    document.body.classList.add('theme-custom');
-    document.body.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+    bgEl.classList.add('theme-custom');
+    bgEl.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
   } else if (theme === 'solid') {
-    document.body.style.background = bgColor || '#ffffff';
+    bgEl.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
-    document.body.classList.add('theme-' + theme);
+    bgEl.classList.add('theme-' + theme);
   }
 }
 
@@ -156,6 +159,8 @@ function hexToRgbTriplet(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+const VEIL_ALPHA = 0.25; // 整页遮罩(body::before)的透明度，故意跟底色透明度滑块脱钩，固定这一个值
+
 // 界面配色：所有"框框"共用的底色（颜色+透明度）和文字颜色。
 // --box-solid/--ink-faint 是从这两个值派生出来的，给缩略图底板、按钮悬浮反色、细分隔线这些
 // 必须用不透明色/极淡色的地方用，见 chrome-theme.css 顶部注释。
@@ -169,6 +174,7 @@ function applyChromeTheme(ink, boxHex, alpha) {
   root.setProperty('--ink', ink);
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
+  root.setProperty('--veil-bg', `rgba(${br}, ${bg}, ${bb}, ${VEIL_ALPHA})`);
   root.setProperty('--box-solid', boxHex);
 }
 

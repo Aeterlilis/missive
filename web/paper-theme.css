@@ -1,14 +1,19 @@
 /* 纸张主题背景：写字页/设置页/历史记录页共用，保证三个页面背景一致。
-   画在 body 上；theme:'white' 是旧版遗留的兜底值（不再有对应按钮，就是 body 的默认背景色），不需要额外规则。
+   写字页画在 body 上（body 高度固定，不会滚动/变长，没有背景被拉伸的问题）；
+   设置页/历史页画在 #bg-fixed 上——一个 position:fixed 铺满视口的层，卡片展开、
+   页面变长的时候它不跟着动，不然 background-size:cover 会随 body 变高重新计算，
+   看起来就像背景被拉伸/缩放了一样（这里改用真正的 fixed 定位元素，而不是
+   background-attachment:fixed，因为后者在 iOS Safari 上对可滚动页面的 body 支持不可靠）。
+   theme:'white' 是旧版遗留的兜底值（不再有对应按钮，就是默认背景色），不需要额外规则。
    纯色背景（theme-solid）不走这里——颜色是用户自己调的，直接写成内联 style，见各页面的 applyTheme()。 */
-body.theme-parchment {
+body.theme-parchment, #bg-fixed.theme-parchment {
   background-color: #e9dcb8;
   background-image: url('backgrounds/parchment.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
-body.theme-lined {
+body.theme-lined, #bg-fixed.theme-lined {
   background: #ffffff;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -18,13 +23,13 @@ body.theme-lined {
   );
   background-position: 0 90px;
 }
-body.theme-custom {
+body.theme-custom, #bg-fixed.theme-custom {
   background-color: #fff;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
-body.theme-grid {
+body.theme-grid, #bg-fixed.theme-grid {
   background: #ffffff;
   background-image:
     repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(0,0,0,0.10) 32px),
@@ -32,28 +37,28 @@ body.theme-grid {
 }
 
 /* 预装的实拍纸张背景：跟 theme-custom 一样铺满，只是图换成自带的 */
-body.theme-xuanzhi {
+body.theme-xuanzhi, #bg-fixed.theme-xuanzhi {
   background-color: #f2ede0;
   background-image: url('backgrounds/xuanzhi.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
-body.theme-watercolor {
+body.theme-watercolor, #bg-fixed.theme-watercolor {
   background-color: #f5f1e8;
   background-image: url('backgrounds/watercolor.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
-body.theme-crumpled {
+body.theme-crumpled, #bg-fixed.theme-crumpled {
   background-color: #f0f0ee;
   background-image: url('backgrounds/crumpled.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
-body.theme-black {
+body.theme-black, #bg-fixed.theme-black {
   background-color: #111111;
   background-image: url('backgrounds/black.jpg');
   background-size: cover;

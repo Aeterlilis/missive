@@ -20,6 +20,9 @@
       <feDisplacementMap in="SourceGraphic" in2="blurred" scale="35" xChannelSelector="R" yChannelSelector="G" />
     </filter>
   </svg>
+  <!-- 纸张主题背景画在这一层（position:fixed，见 settings.css），列表变长的时候
+       它不跟着动，不会出现背景被拉伸的错觉 -->
+  <div id="bg-fixed"></div>
   <div class="wrap">
     <header>
       <a class="icon-btn" href="index.html" title="返回日记" aria-label="返回日记"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 6 10l6 6"/></svg></a>

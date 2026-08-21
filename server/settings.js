@@ -63,6 +63,10 @@ function defaultsWithProfile() {
     theme: 'solid', // solid(纯色，配 bgColor) | parchment | lined | grid | xuanzhi | watercolor | crumpled | black | custom
     themeColor: '#000000', // 开关/滑块这些控件的统一主题色
     bgColor: '#ffffff', // 纸张背景选"纯色"（theme:'solid'）时用的颜色
+    chromeTheme: 'day', // day(白天) | night(夜间) | custom(自定义，用下面三个值)
+    chromeInk: '#000000',   // 界面配色：所有框框的文字/边框颜色
+    chromeBox: '#ffffff',   // 界面配色：所有框框的底色
+    chromeBoxAlpha: 0.55,   // 界面配色：底色透明度
     cjkFont: 'default', // default(霞鹜文楷) | liujian(草书连笔) | zhimang(行书体) | notoserif(宋体) | chunfeng(春风楷书) | custom(自己传的字体)
     cjkFontExt: null,    // 存的自定义字体文件后缀（ttf/otf/ttc），没传过就是 null
     cjkFontName: '',     // 自定义字体的原始文件名，UI 显示用

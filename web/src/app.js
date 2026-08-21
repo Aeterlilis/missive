@@ -640,6 +640,20 @@ async function loadRuntimeConfig() {
     document.documentElement.style.setProperty('--hint-font', `"${CONFIG.CJK_FONT}"`);
     // 主题色：设置页那些控件早就在用这个变量了，写字页一直没接——笔刷预设按钮/开关这些也得跟着走
     document.documentElement.style.setProperty('--accent', s.themeColor || '#000000');
+    // 界面配色（日夜主题）：工具栏/笔刷面板这些框框的底色+文字颜色，逻辑跟设置页 applyChromeTheme 一样
+    {
+      const ink = s.chromeInk || '#000000';
+      const boxHex = s.chromeBox || '#ffffff';
+      const alpha = typeof s.chromeBoxAlpha === 'number' ? s.chromeBoxAlpha : 0.55;
+      const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+      const [ir, ig, ib] = hexToRgb(ink);
+      const [br, bg, bb] = hexToRgb(boxHex);
+      const root = document.documentElement.style;
+      root.setProperty('--ink', ink);
+      root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
+      root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
+      root.setProperty('--box-solid', boxHex);
+    }
     if (typeof s.speed === 'number') {
       const speed = Math.max(1, Math.min(10, s.speed));
       // speed 1(慢)~10(快) → 每帧间隔 30ms~6ms

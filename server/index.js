@@ -45,6 +45,10 @@ function createApp() {
       theme: s.theme,
       themeColor: s.themeColor,
       bgColor: s.bgColor,
+      chromeTheme: s.chromeTheme,
+      chromeInk: s.chromeInk,
+      chromeBox: s.chromeBox,
+      chromeBoxAlpha: s.chromeBoxAlpha,
       hasCustomBackground: fs.existsSync(BACKGROUND_PATH),
       cjkFont: s.cjkFont,
       cjkFontName: s.cjkFontName,
@@ -181,6 +185,16 @@ function createApp() {
     }
     if (typeof body.bgColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.bgColor)) {
       next.bgColor = body.bgColor.toLowerCase();
+    }
+    if (['day', 'night', 'custom'].includes(body.chromeTheme)) next.chromeTheme = body.chromeTheme;
+    if (typeof body.chromeInk === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeInk)) {
+      next.chromeInk = body.chromeInk.toLowerCase();
+    }
+    if (typeof body.chromeBox === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeBox)) {
+      next.chromeBox = body.chromeBox.toLowerCase();
+    }
+    if (typeof body.chromeBoxAlpha === 'number' && body.chromeBoxAlpha > 0) {
+      next.chromeBoxAlpha = Math.max(0.1, Math.min(1, body.chromeBoxAlpha));
     }
     if (['default', 'liujian', 'zhimang', 'notoserif', 'chunfeng', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
     if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;

@@ -10,7 +10,7 @@
 
 html, body {
   background: #ffffff;
-  color: #000000;
+  color: var(--ink);
   font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   accent-color: var(--accent);
   min-height: 100vh;
@@ -24,7 +24,7 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--box-bg);
   z-index: 0;
   pointer-events: none;
 }
@@ -36,9 +36,9 @@ html { scroll-behavior: smooth; }
   width: 42px;
   height: 42px;
   padding: 0;
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
+  background: var(--box-bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -61,8 +61,8 @@ header {
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.55);
-  border-bottom: 1px solid #000;
+  background: var(--box-bg);
+  border-bottom: 1px solid var(--ink);
 }
 h1 { font-size: 18px; font-weight: 600; flex: 1; }
 
@@ -75,14 +75,14 @@ h1 { font-size: 18px; font-weight: 600; flex: 1; }
   gap: 18px;
   overflow-x: auto;
   padding: 0 16px;
-  background: rgba(255, 255, 255, 0.55);
-  border-bottom: 1px solid #000;
+  background: var(--box-bg);
+  border-bottom: 1px solid var(--ink);
   touch-action: manipulation;
 }
 #settings-nav a {
   flex-shrink: 0;
   white-space: nowrap;
-  color: #000;
+  color: var(--ink);
   text-decoration: none;
   font-size: 13px;
   padding: 10px 2px;
@@ -153,12 +153,12 @@ input[type="number"],
 textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #000;
+  border: 1px solid var(--ink);
   border-radius: 12px;
   font-size: 14px;
   font-family: inherit;
-  background: #fff;
-  color: #000;
+  background: var(--box-bg);
+  color: var(--ink);
 }
 
 textarea {
@@ -168,15 +168,15 @@ textarea {
 
 .secondary {
   margin-top: 12px;
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
+  background: var(--box-bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 999px;
   padding: 8px 18px;
   font-size: 13px;
   cursor: pointer;
 }
-.secondary:hover { background: #000; color: #fff; }
+.secondary:hover { background: var(--ink); color: var(--box-solid); }
 .secondary.small { margin-top: 0; padding: 7px 12px; font-size: 12px; white-space: nowrap; }
 
 /* 原生 <input type="file"> 的"选择文件"按钮没法简单地改圆角，
@@ -199,14 +199,14 @@ textarea {
   align-items: center;
   justify-content: center;
   text-align: center;
-  border: 1px solid #000;
+  border: 1px solid var(--ink);
   border-radius: 14px;
   padding: 10px 8px;
   font-size: 13px;
   cursor: pointer;
   opacity: 0.55;
-  background: rgba(255, 255, 255, 0.55);
-  color: #000;
+  background: var(--box-bg);
+  color: var(--ink);
   min-height: 40px;
 }
 .option-pill:hover { opacity: 0.8; }
@@ -225,8 +225,8 @@ textarea {
 /* 桌面版专属：从系统字体库选，隐藏在 window.electronAPI 存在的时候才显示 */
 .cjk-font-electron-row { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
 .cjk-font-electron-row select {
-  flex: 1; border: 1px solid #000; border-radius: 12px; padding: 8px 10px;
-  font-size: 13px; background: #fff; color: #000;
+  flex: 1; border: 1px solid var(--ink); border-radius: 12px; padding: 8px 10px;
+  font-size: 13px; background: var(--box-bg); color: var(--ink);
 }
 
 /* ─── 左右滑动开关：换掉原来的方框打勾 ────────────────── */
@@ -258,8 +258,8 @@ textarea {
 .switch-track {
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid #000;
+  background: var(--box-bg);
+  border: 1px solid var(--ink);
   border-radius: 999px;
   transition: background 0.15s;
 }
@@ -274,7 +274,7 @@ textarea {
   transition: transform 0.15s;
 }
 .switch input:checked ~ .switch-track { background: var(--accent); }
-.switch input:checked ~ .switch-track .switch-thumb { transform: translateX(19px); background: #fff; }
+.switch input:checked ~ .switch-track .switch-thumb { transform: translateX(19px); background: var(--box-solid); }
 
 /* ─── 卡片组：标题行（组名 + 展开/收起 + 新建） ──────────── */
 .card-group { margin-bottom: 22px; }
@@ -290,8 +290,8 @@ textarea {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1px solid #000;
-  background: #fff;
+  border: 1px solid var(--ink);
+  background: var(--box-bg);
   opacity: 0.6;
   cursor: pointer;
   display: flex;
@@ -313,9 +313,9 @@ textarea {
   content: '';
   position: absolute;
   inset: 0;
-  border: 1px solid #000;
+  border: 1px solid var(--ink);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--box-bg);
 }
 .card-stack.collapsed.has-more::before { transform: translateY(9px) scale(0.96); z-index: 0; }
 .card-stack.collapsed.has-more::after { transform: translateY(18px) scale(0.92); z-index: -1; }
@@ -328,10 +328,10 @@ textarea {
 /* ─── 单张卡片：预览态只显示标题+摘要信息，点了才变成可编辑 ─── */
 .card {
   position: relative;
-  border: 1px solid #000;
+  border: 1px solid var(--ink);
   border-radius: 16px;
   padding: 14px 16px 48px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--box-bg);
 }
 .card-head {
   display: flex;
@@ -346,11 +346,11 @@ textarea {
   padding: 2px 0;
   font-size: 15px;
   font-weight: 600;
-  color: #000;
+  color: var(--ink);
 }
 .card-title-input:read-only { pointer-events: none; }
 .card.editing .card-title-input {
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid var(--ink);
   pointer-events: auto;
 }
 
@@ -359,8 +359,8 @@ textarea {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1.5px solid #000;
-  background: #fff;
+  border: 1.5px solid var(--ink);
+  background: var(--box-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -434,7 +434,7 @@ textarea {
     overflow-x: visible;
     overflow-y: auto;
     border-bottom: none;
-    border-right: 1px solid #000;
+    border-right: 1px solid var(--ink);
     padding: 14px 12px;
   }
   #settings-nav a { border-bottom: none; border-left: 2px solid transparent; padding: 8px 0 8px 10px; }

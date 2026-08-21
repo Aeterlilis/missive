@@ -95,9 +95,9 @@ body.theme-black #hint { color: #fff; }
   width: 42px;
   height: 42px;
   padding: 0;
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
+  background: var(--box-bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -148,8 +148,8 @@ body.theme-black #hint { color: #fff; }
   top: 66px;
   left: 12px;
   z-index: 6;
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid #000;
+  background: var(--box-bg);
+  border: 1px solid var(--ink);
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
@@ -164,9 +164,9 @@ body.theme-black #hint { color: #fff; }
 }
 .brush-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .brush-presets button {
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
+  background: var(--box-bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 14px;
   padding: 5px 10px;
   font-size: 13px;
@@ -200,7 +200,7 @@ body.theme-black #hint { color: #fff; }
   resize: none;
   font-size: 28px;
   font-family: "LXGW WenKai", serif;
-  color: #000;
+  color: var(--ink);
   outline: none;
   line-height: 1.6;
 }
@@ -212,9 +212,9 @@ body.theme-black #hint { color: #fff; }
   padding-top: 12px;
 }
 .type-actions button {
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
+  background: var(--box-bg);
+  color: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 20px;
   padding: 8px 16px;
   font-size: 14px;

@@ -9,6 +9,9 @@ let data = null;             // 最近一次从服务器拉到的完整设置
 let currentProfileId = null; // 当前"待启用"的配置槽位（真正生效要点保存）
 let themeColorHex = '#000000'; // 开关/滑块的统一主题色
 let bgColorHex = '#ffffff';    // 纸张背景选"纯色"时用的颜色
+let chromeInkHex = '#000000';  // 界面配色：文字/边框颜色
+let chromeBoxHex = '#ffffff';  // 界面配色：所有卡片/面板/按钮的底色（配合下面的透明度）
+let chromeBoxAlpha = 0.55;     // 界面配色：底色的透明度
 
 function setStatus(text, isError) {
   statusEl.textContent = text;
@@ -139,6 +142,36 @@ function setupCjkFontPills() {
 function applyThemeColor(hex) {
   themeColorHex = hex;
   document.documentElement.style.setProperty('--accent', hex);
+}
+
+const CHROME_PRESETS = {
+  day: { ink: '#000000', box: '#ffffff', alpha: 0.55 },
+  night: { ink: '#ffffff', box: '#000000', alpha: 0.55 },
+};
+
+function hexToRgbTriplet(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// 界面配色：所有"框框"共用的底色（颜色+透明度）和文字/边框色。
+// --box-solid/--ink-faint 是从这两个值派生出来的，给缩略图底板、按钮悬浮反色、细分隔线这些
+// 必须用不透明色/极淡色的地方用，见 chrome-theme.css 顶部注释。
+function applyChromeTheme(ink, boxHex, alpha) {
+  chromeInkHex = ink;
+  chromeBoxHex = boxHex;
+  chromeBoxAlpha = alpha;
+  const [ir, ig, ib] = hexToRgbTriplet(ink);
+  const [br, bg, bb] = hexToRgbTriplet(boxHex);
+  const root = document.documentElement.style;
+  root.setProperty('--ink', ink);
+  root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
+  root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
+  root.setProperty('--box-solid', boxHex);
+}
+
+function syncChromeCustomVisibility(mode) {
+  $('chrome-theme-custom').classList.toggle('hidden', mode !== 'custom');
 }
 
 // 通用 HSB方形/色环 选色盘——主题色跟纸张纯色背景共用同一份实现，靠 ids/presetsSelector 挂到不同的 DOM 上。
@@ -856,6 +889,18 @@ async function load() {
     applyThemeColor(data.themeColor || '#000000');
     themeColorPicker.setHex(data.themeColor || '#000000');
 
+    const chromeTheme = data.chromeTheme || 'day';
+    chromeThemePills.setActive(chromeTheme);
+    const chromeDefaults = CHROME_PRESETS[chromeTheme] || CHROME_PRESETS.day;
+    chromeInkHex = data.chromeInk || chromeDefaults.ink;
+    chromeBoxHex = data.chromeBox || chromeDefaults.box;
+    chromeBoxAlpha = typeof data.chromeBoxAlpha === 'number' ? data.chromeBoxAlpha : chromeDefaults.alpha;
+    applyChromeTheme(chromeInkHex, chromeBoxHex, chromeBoxAlpha);
+    chromeBoxColorPicker.setHex(chromeBoxHex);
+    chromeInkColorPicker.setHex(chromeInkHex);
+    $('chromeBoxAlpha').value = chromeBoxAlpha;
+    syncChromeCustomVisibility(chromeTheme);
+
     cjkFontPills.setActive(data.cjkFont || 'default');
     $('cjkFontCustomPill').textContent = data.hasCjkFont ? (data.cjkFontName || '自定义字体') : '上传字体文件';
 
@@ -1008,6 +1053,10 @@ async function saveAll() {
         theme,
         themeColor: themeColorHex,
         bgColor: bgColorHex,
+        chromeTheme: chromeThemePills.getActive() || 'day',
+        chromeInk: chromeInkHex,
+        chromeBox: chromeBoxHex,
+        chromeBoxAlpha: chromeBoxAlpha,
         cjkFont: cjkFontPills.getActive(),
         autoSendEnabled: $('autoSendEnabled').checked,
         autoSendSeconds: parseFloat($('autoSendSeconds').value) || 2.8,
@@ -1057,5 +1106,42 @@ const themePills = setupOptionPills('theme', (value) => {
   syncBgPickerVisibility(value);
 }); // 点了就实时预览纸张背景
 const cjkFontPills = setupCjkFontPills();
+
+const chromeBoxColorPicker = setupColorPicker({
+  ids: {
+    panel: 'chrome-box-color-panel', sv: 'chrome-box-color-sv', hue: 'chrome-box-color-hue', wheel: 'chrome-box-color-wheel',
+    modeSquare: 'chrome-box-color-mode-square', preview: 'chrome-box-color-preview', hex: 'chrome-box-color-hex', customBtn: 'btn-chrome-box-custom-color',
+  },
+  presetsSelector: '#chrome-box-presets .color-swatch[data-color]',
+  getInitial: () => chromeBoxHex,
+  onChange: (hex) => applyChromeTheme(chromeInkHex, hex, chromeBoxAlpha),
+  statusMsg: '界面底色已更新，记得点保存',
+});
+const chromeInkColorPicker = setupColorPicker({
+  ids: {
+    panel: 'chrome-ink-color-panel', sv: 'chrome-ink-color-sv', hue: 'chrome-ink-color-hue', wheel: 'chrome-ink-color-wheel',
+    modeSquare: 'chrome-ink-color-mode-square', preview: 'chrome-ink-color-preview', hex: 'chrome-ink-color-hex', customBtn: 'btn-chrome-ink-custom-color',
+  },
+  presetsSelector: '#chrome-ink-presets .color-swatch[data-color]',
+  getInitial: () => chromeInkHex,
+  onChange: (hex) => applyChromeTheme(hex, chromeBoxHex, chromeBoxAlpha),
+  statusMsg: '文字/边框颜色已更新，记得点保存',
+});
+$('chromeBoxAlpha').addEventListener('input', () => {
+  applyChromeTheme(chromeInkHex, chromeBoxHex, parseFloat($('chromeBoxAlpha').value));
+});
+const chromeThemePills = setupOptionPills('chromeTheme', (value) => {
+  syncChromeCustomVisibility(value);
+  if (value === 'custom') {
+    applyChromeTheme(chromeInkHex, chromeBoxHex, chromeBoxAlpha);
+    return;
+  }
+  const p = CHROME_PRESETS[value];
+  applyChromeTheme(p.ink, p.box, p.alpha);
+  chromeBoxColorPicker.setHex(p.box);
+  chromeInkColorPicker.setHex(p.ink);
+  $('chromeBoxAlpha').value = p.alpha;
+}); // 点了就实时预览
+
 load();
 setupSectionNav();

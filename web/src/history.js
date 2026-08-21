@@ -17,7 +17,21 @@ function applyTheme(theme, bgColor) {
     document.body.classList.add('theme-' + theme);
   }
 }
-fetch('/api/settings').then((r) => r.json()).then((s) => applyTheme(s.theme, s.bgColor)).catch(() => {});
+// 界面配色（日夜主题）：卡片/缩略图这些框框的底色+文字颜色，逻辑跟设置页 applyChromeTheme 一样
+function applyChromeTheme(s) {
+  const ink = s.chromeInk || '#000000';
+  const boxHex = s.chromeBox || '#ffffff';
+  const alpha = typeof s.chromeBoxAlpha === 'number' ? s.chromeBoxAlpha : 0.55;
+  const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const [ir, ig, ib] = hexToRgb(ink);
+  const [br, bg, bb] = hexToRgb(boxHex);
+  const root = document.documentElement.style;
+  root.setProperty('--ink', ink);
+  root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
+  root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
+  root.setProperty('--box-solid', boxHex);
+}
+fetch('/api/settings').then((r) => r.json()).then((s) => { applyTheme(s.theme, s.bgColor); applyChromeTheme(s); }).catch(() => {});
 
 function fmtDate(iso) {
   const d = new Date(iso);

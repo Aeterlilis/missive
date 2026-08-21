@@ -25,39 +25,7 @@ html, body {
   overscroll-behavior: none;
 }
 
-/* 纸张主题：画在 body 上，画布本身是透明的，盖在这层上面书写 */
-body.theme-kraft {
-  background: #d9c4a0;
-  background-image:
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(70,50,20,0.12) 100%);
-}
-body.theme-parchment {
-  background: #f1e6cc;
-  background-image:
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(90,70,30,0.16) 100%);
-}
-body.theme-lined {
-  background: #ffffff;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 43px,
-    rgba(60,100,170,0.28) 44px
-  );
-  background-position: 0 90px;
-}
-body.theme-custom {
-  background-color: #fff;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-body.theme-grid {
-  background: #ffffff;
-  background-image:
-    repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(0,0,0,0.10) 32px),
-    repeating-linear-gradient(to right, transparent 0, transparent 31px, rgba(0,0,0,0.10) 32px);
-}
+/* 纸张主题背景（body.theme-*）现在挪到 paper-theme.css 了，设置页/历史页也要用 */
 
 /* 全屏画布：用户笔迹 + AI 手写都画在这一层，本身透明，露出 body 的纸张主题 */
 #paper {
@@ -119,81 +87,66 @@ body.debug #debug { display: block; }
 }
 #hint.fade { opacity: 0; }
 
-/* 设置入口：右上角小齿轮，很淡，不干扰书写 */
+/* 圆形图标按钮：工具栏按钮 + 右上角历史/设置入口共用同一套样式，
+   保证"常驻入口"和"临时工具"视觉上是一套东西，不再有一个淡一个实的割裂感 */
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: #fff;
+  color: #000;
+  border: 1px solid #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  cursor: pointer;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:hover,
+.icon-btn:active { opacity: 1; }
+.icon-btn:disabled { opacity: 0.2; cursor: default; }
+
+/* 设置 / 历史记录 入口：右上角常驻 */
 #settings-link {
   position: fixed;
   top: 14px;
   right: 16px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: #000;
-  opacity: 0.25;
-  text-decoration: none;
   z-index: 6;
-  touch-action: manipulation;
 }
-#settings-link:hover,
-#settings-link:active { opacity: 0.7; }
 
 #history-link {
   position: fixed;
   top: 14px;
-  right: 56px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  opacity: 0.25;
-  text-decoration: none;
+  right: 66px;
   z-index: 6;
-  touch-action: manipulation;
 }
-#history-link:hover,
-#history-link:active { opacity: 0.7; }
 
-/* 写字工具栏：底部居中，默认藏起来，只在 LISTENING 时（body.is-listening）显示 */
+/* 写字工具栏：默认竖屏布局——左上角一排横排图标，写字/等待AI回复/AI回复中全程常驻显示，
+   不随状态切换隐藏。横屏时（见下方 @media）切换成左边一竖列。 */
 #toolbar {
-  display: none;
+  display: flex;
   position: fixed;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  gap: 10px;
+  top: 14px;
+  left: 12px;
+  flex-direction: row;
+  gap: 8px;
   z-index: 6;
   touch-action: manipulation;
 }
-body.is-listening #toolbar { display: flex; }
-
-#toolbar button {
-  background: #fff;
-  color: #000;
-  border: 1px solid #000;
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-size: 15px;
-  opacity: 0.55;
-  cursor: pointer;
-}
-#toolbar button:hover,
-#toolbar button:active { opacity: 1; }
-#toolbar button:disabled { opacity: 0.2; cursor: default; }
 
 .hidden { display: none !important; }
 
-/* 笔刷面板：从工具栏的🖊展开，悬浮在工具栏正上方 */
+/* 笔刷面板：从工具栏的🖊展开，紧挨着工具栏弹出（竖屏在下方，横屏在右侧，见下方 @media） */
 #brush-panel {
   position: fixed;
-  left: 50%;
-  bottom: 62px;
-  transform: translateX(-50%);
+  top: 66px;
+  left: 12px;
   z-index: 6;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.55);
   border: 1px solid #000;
   border-radius: 10px;
   padding: 10px 12px;
@@ -201,7 +154,13 @@ body.is-listening #toolbar { display: flex; }
   flex-direction: column;
   gap: 8px;
 }
-.brush-presets { display: flex; gap: 6px; }
+
+/* 横屏：工具栏改成左边竖列（顺序不变，从上到下），笔刷面板改从右侧弹出 */
+@media (orientation: landscape) {
+  #toolbar { flex-direction: column; }
+  #brush-panel { top: 14px; left: 66px; }
+}
+.brush-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .brush-presets button {
   background: #fff;
   color: #000;

@@ -1,25 +1,68 @@
-.entry {
-  border: 1px solid #000;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  overflow: hidden;
+/* 历史页没有分区导航，settings.css 给 .wrap 留的顶部空间是按"header+导航"两层算的，
+   这里只有一层 header，改窄一点；横屏那份同理，也不需要给导航栏留左边距 */
+.wrap { padding-top: 74px; }
+@media (orientation: landscape) {
+  .wrap { padding-top: 74px; padding-left: 20px; max-width: 900px; }
 }
+
+/* 一次"对话"一张卡：默认只显示头部（首页缩略图+日期+页数），点开才展开这次对话写的所有页 */
+.conv-card {
+  border: 1px solid #000;
+  border-radius: 16px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.conv-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.conv-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #000;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.conv-main { flex: 1; min-width: 0; }
+.conv-date { font-size: 14px; font-weight: 600; }
+.conv-count { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+.conv-chevron { font-size: 12px; opacity: 0.45; flex-shrink: 0; }
+.conv-card.open .conv-chevron { opacity: 0.8; }
+
+.conv-body { display: none; border-top: 1px solid #000; }
+.conv-card.open .conv-body { display: block; }
+
+/* 对话展开后里面的每一页不再单独画框（避免卡片嵌套卡片），
+   用底部一条细分隔线区分就够了 */
+.entry {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+}
+.entry:last-child { border-bottom: none; }
 
 .entry-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
   cursor: pointer;
 }
 
 .entry-thumb {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid #000;
-  border-radius: 4px;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
@@ -32,7 +75,7 @@
 }
 
 .entry-snippet {
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -40,17 +83,17 @@
 
 .entry-detail {
   display: none;
-  border-top: 1px solid #000;
-  padding: 14px 16px;
+  position: relative;
+  padding: 10px 0 40px;
 }
 .entry.open .entry-detail { display: block; }
 
 .entry-detail img {
   max-width: 100%;
   border: 1px solid #000;
-  border-radius: 4px;
+  border-radius: 10px;
   margin-bottom: 10px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .entry-detail .reply {
@@ -60,13 +103,21 @@
   margin-bottom: 12px;
 }
 
+/* 跟设置页卡片的删除按钮同款：圆形、收在右下角、半透明红 */
 .entry-delete {
-  background: none;
-  border: 1px solid #c00;
-  color: #c00;
-  border-radius: 4px;
-  padding: 5px 12px;
-  font-size: 12px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(192, 57, 43, 0.55);
+  border: 1px solid #7a2117;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
-.entry-delete:hover { background: #c00; color: #fff; }
+.entry-delete:hover { background: rgba(192, 57, 43, 0.85); }
+.entry-delete svg { width: 14px; height: 14px; }

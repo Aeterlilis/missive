@@ -44,13 +44,19 @@ function defaultsWithProfile() {
     profiles: [p],
     activeProfileId: p.id,
     maxTokens: 280,
-    promptCards: [newCard({ category: 'ai_persona', title: '默认人设', content: DEFAULT_PERSONA, enabled: true })],
+    // DEFAULT_PERSONA 说的是书写环境和回应规则，不是角色扮演意义上的"人设"，归到系统提示词类别
+    promptCards: [newCard({ category: 'other', title: '环境与回应规则', content: DEFAULT_PERSONA, enabled: true })],
     font: 'pinyon', // pinyon(花体) | medieval(哥特体) | wenkai(统一用文楷)
     speed: 6,       // 1(慢) ~ 10(快)
     hintText: '用笔在这里写点什么…\n比如：今天发生了什么',
     theme: 'white', // white | kraft | parchment | lined | grid | custom
+    themeColor: '#000000', // 开关/滑块这些控件的统一主题色
+    cjkFont: 'default', // default | custom —— 中文手写用默认霞鹜文楷还是自己传的字体
+    cjkFontExt: null,    // 存的自定义字体文件后缀（ttf/otf/ttc），没传过就是 null
+    cjkFontName: '',     // 自定义字体的原始文件名，UI 显示用
     contextTurns: 10,     // 滚动上下文窗口大小
     contextResetAt: null, // 重置对话时间点；null 表示从最开始算
+    conversationId: 1,    // 每次"重置对话"就+1，历史记录页按这个把条目分组成一次次对话
     autoSendEnabled: true,
     autoSendSeconds: 2.8, // 停笔多久后自动发送（仅 autoSendEnabled 时生效）
     fadeSeconds: 1.5,     // AI回复淡出的时长
@@ -108,12 +114,16 @@ function migrateFlatToProfiles(raw) {
   return next;
 }
 
-// 兼容老的单个 persona 字符串：升级成 ai_persona 类下的一张卡片
+// 兼容老的单个 persona 字符串：升级成一张卡片。真是用户自己写的人设就归 ai_persona，
+// 没设置过、落到 DEFAULT_PERSONA 兜底的，跟新默认值一样归到系统提示词类别
 function migratePersonaToCards(raw) {
   if (Array.isArray(raw.promptCards)) return raw;
   const next = { ...raw };
-  const content = typeof raw.persona === 'string' && raw.persona.trim() ? raw.persona : DEFAULT_PERSONA;
-  next.promptCards = [newCard({ category: 'ai_persona', title: '默认人设', content, enabled: true })];
+  const hasCustomPersona = typeof raw.persona === 'string' && raw.persona.trim();
+  const content = hasCustomPersona ? raw.persona : DEFAULT_PERSONA;
+  const category = hasCustomPersona ? 'ai_persona' : 'other';
+  const title = hasCustomPersona ? '默认人设' : '环境与回应规则';
+  next.promptCards = [newCard({ category, title, content, enabled: true })];
   delete next.persona;
   return next;
 }

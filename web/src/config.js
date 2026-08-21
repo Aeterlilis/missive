@@ -60,8 +60,10 @@ export const CONFIG = {
   FADE_DURATION_MS: 1500,
 
   // ─── 字体 ───────────────────────────────────────
-  // 纯英文回答用的字体（含中文的一律用 LXGW WenKai）。运行时会被 /api/settings 的 font 覆盖。
+  // 纯英文回答用的字体。运行时会被 /api/settings 的 font 覆盖。
   LATIN_FONT: 'Pinyon Script',
+  // 含中文的字用这个（默认霞鹜文楷）。运行时可能被用户上传的自定义字体覆盖，见 app.js loadRuntimeConfig。
+  CJK_FONT: 'LXGW WenKai',
 
   // ─── 笔 ─────────────────────────────────────────
   // 压感低于此值不算在写（移植自 riddle 的 40/4096）

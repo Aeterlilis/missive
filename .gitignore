@@ -2,9 +2,10 @@
 server/.env
 server/settings.json
 
-# 用户个人数据 —— 日记/对话历史、自定义背景图，不该进仓库
+# 用户个人数据 —— 日记/对话历史、自定义背景图/字体，不该进仓库
 server/history.json
 server/background.jpg
+server/cjk-font.*
 
 # 依赖
 node_modules/

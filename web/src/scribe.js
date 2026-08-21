@@ -31,7 +31,7 @@ export class Scribe {
       try {
         await Promise.race([
           Promise.all([
-            document.fonts.load(`64px "LXGW WenKai"`),
+            document.fonts.load(`64px "${CONFIG.CJK_FONT}"`),
             document.fonts.load(`64px "${CONFIG.LATIN_FONT}"`),
           ]),
           new Promise((_, rej) => setTimeout(() => rej(new Error('字体加载超时')), 5000)),
@@ -187,9 +187,9 @@ function innerWidth() {
 }
 
 // ─── 字体选择 ───────────────────────────────────────────────
-// 纯英文（不含中文）用设置里选的字体，含中文的一律用文楷。
+// 纯英文（不含中文）用设置里选的字体，含中文的用 CONFIG.CJK_FONT（默认文楷，可被自定义字体覆盖）。
 function pickFontFamily(text) {
-  return hasCjk(text) ? 'LXGW WenKai' : CONFIG.LATIN_FONT;
+  return hasCjk(text) ? CONFIG.CJK_FONT : CONFIG.LATIN_FONT;
 }
 function hasCjk(text) {
   for (const ch of text) {

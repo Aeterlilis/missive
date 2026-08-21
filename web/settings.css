@@ -1,50 +1,128 @@
-/* 设置页样式：延续日记页的纯黑白基调，但这里是正经表单，允许正常滚动/选中 */
+/* 设置页样式：延续日记页的纯黑白基调，但这里是正经表单，允许正常滚动/选中。
+   圆角统一放大——面板/卡片/按钮全部走"圆圆的"，不用方角小圆角那套了。 */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* index.html 的 styles.css 里定义了 .hidden，但设置页/历史页不引用那个文件，
+   需要在这里单独声明一份，否则依赖这个 class 的元素（如色板面板）不会真正隐藏 */
+.hidden { display: none !important; }
+
+:root { --accent: #000000; }
 
 html, body {
   background: #ffffff;
   color: #000000;
   font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  accent-color: var(--accent);
+  min-height: 100vh;
+  min-height: 100dvh; /* 内容不够一屏高的时候，纸张背景色（body.theme-*）也得撑满，不然底下露出没上色的一截 */
 }
 
-.wrap {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 20px 80px;
+body { position: relative; }
+/* 整个页面盖一层半透明白，跟header/导航栏那层遮罩保持同一个不透明度，
+   避免header/导航区域和内容区域出现色调断层 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.55);
+  z-index: 0;
+  pointer-events: none;
 }
 
+html { scroll-behavior: smooth; }
+
+/* 圆形图标按钮：跟写字页的工具栏/历史/设置入口共用同一套视觉语言 */
+.icon-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: #fff;
+  color: #000;
+  border: 1px solid #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:hover,
+.icon-btn:active { opacity: 1; }
+
+/* ─── 顶部常驻：返回 / 标题 / 保存，下面接分区导航 ─────────── */
 header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 6;
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.55);
+  border-bottom: 1px solid #000;
 }
+h1 { font-size: 18px; font-weight: 600; flex: 1; }
 
-.back {
+/* ─── 分区导航：文字标签 + 当前项下划线，横屏切左边竖列 ─────── */
+#settings-nav {
+  position: fixed;
+  top: 66px; left: 0; right: 0;
+  z-index: 5;
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.55);
+  border-bottom: 1px solid #000;
+  touch-action: manipulation;
+}
+#settings-nav a {
+  flex-shrink: 0;
+  white-space: nowrap;
   color: #000;
   text-decoration: none;
-  font-size: 14px;
-  opacity: 0.6;
-  border: 1px solid #000;
-  padding: 6px 12px;
-  border-radius: 4px;
+  font-size: 13px;
+  padding: 10px 2px;
+  opacity: 0.5;
+  border-bottom: 2px solid transparent;
 }
-.back:hover { opacity: 1; }
+#settings-nav a:hover { opacity: 0.8; }
+#settings-nav a.active { opacity: 1; border-bottom-color: var(--accent); font-weight: 600; }
 
-h1 { font-size: 22px; font-weight: 600; flex: 1; }
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 118px 20px 60px;
+}
 
+.status {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.7;
+  min-height: 18px;
+  margin-bottom: 14px;
+  transition: opacity 0.3s;
+}
+
+/* 大板块本身不画框，避免跟外层header/导航的半透明遮罩形成嵌套感，
+   只保留卡片这一级的边框 */
 section {
-  border: 1px solid #000;
-  border-radius: 6px;
-  padding: 18px 20px;
-  margin-bottom: 20px;
+  padding: 18px 0;
+  margin-bottom: 8px;
 }
 
 h2 {
   font-size: 15px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
+h3 { font-size: 13px; font-weight: 600; opacity: 0.85; margin-bottom: 8px; }
 
 .hint {
   font-size: 13px;
@@ -57,7 +135,9 @@ label {
   display: block;
   margin-bottom: 14px;
 }
-label span {
+/* 只管 label 的直接子 span（字段说明文字），不然会一路漏到 switch 内部
+   嵌套的 track/thumb 这些 span 上，导致开关的滑块错位 */
+label > span {
   display: block;
   font-size: 13px;
   opacity: 0.7;
@@ -70,9 +150,9 @@ input[type="password"],
 input[type="number"],
 textarea {
   width: 100%;
-  padding: 9px 10px;
+  padding: 10px 12px;
   border: 1px solid #000;
-  border-radius: 4px;
+  border-radius: 12px;
   font-size: 14px;
   font-family: inherit;
   background: #fff;
@@ -89,84 +169,280 @@ textarea {
   background: #fff;
   color: #000;
   border: 1px solid #000;
-  border-radius: 4px;
-  padding: 7px 14px;
+  border-radius: 999px;
+  padding: 8px 18px;
   font-size: 13px;
   cursor: pointer;
 }
 .secondary:hover { background: #000; color: #fff; }
-.secondary.small { margin-top: 0; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+.secondary.small { margin-top: 0; padding: 7px 12px; font-size: 12px; white-space: nowrap; }
 
-.profile-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.profile-row select {
-  flex: 1;
-  padding: 8px 10px;
-  border: 1px solid #000;
-  border-radius: 4px;
-  font-size: 14px;
-  background: #fff;
-  color: #000;
+/* 原生 <input type="file"> 的"选择文件"按钮没法简单地改圆角，
+   干脆藏起来，用一个样式统一的 label 顶替 */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
-.model-row {
-  display: flex;
-  gap: 8px;
-}
+.model-row { display: flex; gap: 8px; }
 .model-row input { flex: 1; }
 
-.card-category { margin-bottom: 22px; }
-.card-category:last-child { margin-bottom: 0; }
-.card-category h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; opacity: 0.85; }
-
-.card-item {
+/* 选项做成胶囊小卡片——跟写字页笔刷预设那排按钮一个路数，不用原生单选框了 */
+.option-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.option-pills-2col { grid-template-columns: repeat(2, 1fr); }
+.option-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   border: 1px solid #000;
-  border-radius: 4px;
-  padding: 10px 12px;
+  border-radius: 14px;
+  padding: 10px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.55);
+  color: #000;
+  min-height: 40px;
+}
+.option-pill:hover { opacity: 0.8; }
+.option-pill.active { opacity: 1; background: var(--accent); color: #fff; }
+
+.option-pill-custom {
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+/* 只有真的贴了缩略图之后才需要白字+阴影撑可读性，没图时跟别的胶囊一样是黑字 */
+.option-pill-custom.has-image { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.option-pill-custom.has-image.active { background: transparent; }
+.option-pill-custom.active { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 桌面版专属：从系统字体库选，隐藏在 window.electronAPI 存在的时候才显示 */
+.cjk-font-electron-row { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
+.cjk-font-electron-row select {
+  flex: 1; border: 1px solid #000; border-radius: 12px; padding: 8px 10px;
+  font-size: 13px; background: #fff; color: #000;
+}
+
+/* ─── 左右滑动开关：换掉原来的方框打勾 ────────────────── */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
   margin-bottom: 10px;
 }
-.card-item-head {
+.switch-row span:first-child { font-size: 14px; margin-bottom: 0; opacity: 1; }
+/* 覆盖上面 label > span 对表单说明文字的样式，避免影响到这里的 .switch */
+.switch-row .switch { display: block; margin-bottom: 0; opacity: 1; }
+.switch {
+  position: relative;
+  width: 46px;
+  height: 27px;
+  flex-shrink: 0;
+}
+.switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #000;
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 21px;
+  height: 21px;
+  background: #000;
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+.switch input:checked ~ .switch-track { background: var(--accent); }
+.switch input:checked ~ .switch-track .switch-thumb { transform: translateX(19px); background: #fff; }
+
+/* ─── 卡片组：标题行（组名 + 展开/收起 + 新建） ──────────── */
+.card-group { margin-bottom: 22px; }
+.card-group:last-child { margin-bottom: 0; }
+.card-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.card-group-title { font-size: 14px; font-weight: 600; opacity: 0.85; flex: 1; }
+.add-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid #000;
+  background: #fff;
+  opacity: 0.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+.add-btn:hover { opacity: 1; }
+
+/* 堆叠态：点最前面那张卡展开。露出来的不是切片细边，是两张完整的卡片形状
+   （跟真卡片同样的圆角+边框+半透明底），整体错开叠在最前面那张后面 */
+.card-stack { position: relative; }
+.card-stack.collapsed { cursor: pointer; }
+.card-stack.collapsed.has-more { margin-bottom: 22px; }
+.card-stack.collapsed.has-more::before,
+.card-stack.collapsed.has-more::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid #000;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.card-stack.collapsed.has-more::before { transform: translateY(9px) scale(0.96); z-index: 0; }
+.card-stack.collapsed.has-more::after { transform: translateY(18px) scale(0.92); z-index: -1; }
+.card-stack.collapsed .card:not(:first-child) { display: none; }
+.card-stack.collapsed .card { position: relative; z-index: 1; }
+.card-stack:not(.collapsed) .card { margin-bottom: 12px; }
+.card-stack:not(.collapsed) .card:last-child { margin-bottom: 0; }
+.card-empty { font-size: 13px; opacity: 0.5; padding: 4px 2px; }
+
+/* ─── 单张卡片：预览态只显示标题+摘要信息，点了才变成可编辑 ─── */
+.card {
+  position: relative;
+  border: 1px solid #000;
+  border-radius: 16px;
+  padding: 14px 16px 48px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.card-title-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+}
+.card-title-input:read-only { pointer-events: none; }
+.card.editing .card-title-input {
+  border-bottom: 1px solid #000;
+  pointer-events: auto;
+}
+
+/* 互斥选择（API配置）：打勾圆圈 */
+.check-radio {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #000;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.check-radio svg { width: 14px; height: 14px; color: #fff; opacity: 0; }
+.check-radio.selected { background: var(--accent); }
+.check-radio.selected svg { opacity: 1; }
+
+.card-preview-rows { display: flex; flex-direction: column; gap: 5px; }
+.card-preview-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  font-size: 12.5px;
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.card-item-head input[type="text"] {
+.card-preview-row svg { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.8; }
+.card.editing .card-preview-rows,
+.card:not(.editing) .card-edit-rows { display: none; }
+.card-edit-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.card-edit-rows label { margin-bottom: 0; }
+.card-edit-rows textarea { min-height: 90px; font-size: 13px; }
+
+.card-delete-fab {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(192, 57, 43, 0.55);
+  border: 1px solid #7a2117;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+.card-delete-fab:hover { background: rgba(192, 57, 43, 0.85); }
+.card-delete-fab svg { width: 14px; height: 14px; }
+
+/* 系统提示词：不做堆叠，直接一条条平铺，右侧一个开关 */
+.card-list-flat { display: flex; flex-direction: column; gap: 10px; }
+.flat-row {
+  border: 1px solid #000;
+  border-radius: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.flat-row-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.flat-row-title {
   flex: 1;
   border: none;
-  border-bottom: 1px solid transparent;
-  padding: 2px 0;
+  background: transparent;
   font-size: 14px;
-  font-weight: 600;
+  padding: 2px 0;
+  color: #000;
 }
-.card-item-head input[type="text"]:focus { border-bottom-color: #000; outline: none; }
-.card-item textarea {
-  width: 100%;
-  min-height: 70px;
-  border: 1px solid #000;
-  border-radius: 4px;
-  padding: 8px;
-  font-size: 13px;
-  font-family: inherit;
-}
-.card-item-foot {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 6px;
-}
-.card-delete {
+.flat-row-title:read-only { pointer-events: none; }
+.flat-row.editing .flat-row-title { border-bottom: 1px solid #000; pointer-events: auto; }
+.flat-row-body { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
+.flat-row.editing .flat-row-body { display: flex; }
+.flat-row-body textarea { min-height: 80px; font-size: 13px; }
+.flat-row-delete {
   background: none;
   border: none;
-  color: #c00;
+  color: #c0392b;
   font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
+  flex-shrink: 0;
 }
-.card-empty { font-size: 13px; opacity: 0.5; margin-bottom: 10px; }
 
 .slider-row {
   display: flex;
@@ -177,33 +453,55 @@ textarea {
 }
 .slider-row input[type="range"] { flex: 1; }
 
-.radio-group { display: flex; flex-direction: column; gap: 10px; }
-.radio { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-.radio input { cursor: pointer; }
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  position: sticky;
-  bottom: 0;
-  background: #fff;
-  padding: 14px 0;
+/* 主题色选色盘——跟写字页笔刷颜色那套完全同款（同一套HSV数学+canvas画法，照搬过来的） */
+.color-presets { display: flex; gap: 6px; margin-top: 8px; }
+.color-swatch {
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid #000;
+  padding: 0; cursor: pointer; opacity: 0.55;
+}
+.color-swatch:hover { opacity: 0.85; }
+.color-swatch.active { opacity: 1; outline: 2px solid #000; outline-offset: 2px; }
+.color-swatch-custom { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+#theme-color-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-width: 200px; }
+.color-mode-tabs { display: flex; gap: 6px; }
+.color-mode-tab {
+  background: #fff; color: #000; border: 1px solid #000; border-radius: 14px;
+  padding: 3px 10px; font-size: 12px; cursor: pointer; opacity: 0.55;
+}
+.color-mode-tab:hover { opacity: 0.85; }
+.color-mode-tab.active { opacity: 1; background: var(--accent); color: #fff; }
+#theme-color-mode-square { display: flex; flex-direction: column; gap: 6px; }
+#theme-color-panel canvas {
+  width: 160px; border: 1px solid #000; border-radius: 10px; cursor: crosshair;
+  display: block; align-self: flex-start;
+}
+#theme-color-wheel { border-radius: 50%; align-self: center; }
+.color-panel-row { display: flex; align-items: center; gap: 8px; }
+.color-panel-row .color-swatch { cursor: default; opacity: 1; flex-shrink: 0; }
+#theme-color-hex {
+  flex: 1; border: 1px solid #000; border-radius: 8px; padding: 5px 8px;
+  font: 13px/1 monospace; text-transform: lowercase;
 }
 
-button[type="submit"] {
-  background: #000;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 24px;
-  font-size: 15px;
-  cursor: pointer;
+/* 横屏：分区导航从顶部横条改成左边竖列，页面内容整体右移让出空间 */
+@media (orientation: landscape) {
+  header { right: auto; width: 100%; }
+  #settings-nav {
+    top: 66px;
+    bottom: 0;
+    right: auto;
+    width: 110px;
+    flex-direction: column;
+    gap: 4px;
+    overflow-x: visible;
+    overflow-y: auto;
+    border-bottom: none;
+    border-right: 1px solid #000;
+    padding: 14px 12px;
+  }
+  #settings-nav a { border-bottom: none; border-left: 2px solid transparent; padding: 8px 0 8px 10px; }
+  #settings-nav a.active { border-bottom: none; border-left-color: var(--accent); }
+  .wrap { padding-top: 82px; padding-left: 130px; max-width: 1100px; }
+  section { scroll-margin-top: 24px; }
 }
-button[type="submit"]:hover { opacity: 0.85; }
-
-.status {
-  font-size: 13px;
-  opacity: 0.7;
-  transition: opacity 0.3s;
-}
+section[id] { scroll-margin-top: 118px; }

@@ -3,7 +3,47 @@
 // 便携版exe放在只读路径(比如U盘)而写不进去。
 
 const path = require('path');
-const { app, BrowserWindow, Menu } = require('electron');
+const fs = require('fs');
+const os = require('os');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+
+// 系统字体扫描——只给"从系统字体库选中文手写字体"这一个功能用，
+// 白名单限定在这两个目录，read-font-file 也只认这两个目录下的路径，别的一律拒绝
+const SYSTEM_FONT_DIRS = [
+  'C:\\Windows\\Fonts',
+  path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Windows', 'Fonts'),
+];
+
+function listFontsInDir(dir) {
+  try {
+    return fs.readdirSync(dir)
+      .filter((f) => /\.(ttf|otf|ttc)$/i.test(f))
+      .map((f) => ({ name: f.replace(/\.(ttf|otf|ttc)$/i, ''), path: path.join(dir, f) }));
+  } catch {
+    return [];
+  }
+}
+
+function isAllowedFontPath(filePath) {
+  const normalized = path.normalize(filePath).toLowerCase();
+  return SYSTEM_FONT_DIRS.some((d) => normalized.startsWith(path.normalize(d).toLowerCase()));
+}
+
+ipcMain.handle('list-system-fonts', () => {
+  const all = SYSTEM_FONT_DIRS.flatMap(listFontsInDir);
+  const seen = new Set();
+  return all
+    .filter((f) => { if (seen.has(f.name)) return false; seen.add(f.name); return true; })
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh'));
+});
+
+ipcMain.handle('read-font-file', (event, filePath) => {
+  if (typeof filePath !== 'string' || !isAllowedFontPath(filePath)) {
+    throw new Error('不允许读取这个路径');
+  }
+  const buf = fs.readFileSync(filePath);
+  return { base64: buf.toString('base64'), filename: path.basename(filePath) };
+});
 
 // 必须在 require('../server') 之前设置，settings.js 读取这个环境变量决定存哪
 process.env.SETTINGS_DIR = app.getPath('userData');
@@ -28,7 +68,9 @@ function createWindow(port) {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      // 渲染进程只通过 fetch 访问本地服务，不需要任何 Node 能力
+      // 渲染进程主要靠 fetch 访问本地服务；preload 只额外开了个窄口子，
+      // 给设置页"从系统字体库选字体"这一个功能用（见 preload.js）
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 

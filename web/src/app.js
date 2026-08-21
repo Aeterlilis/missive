@@ -388,7 +388,7 @@ class App {
   // ─── REPLYING：推进手写动画（AI 回复由 _consumeOracle 独立喂入 scribe）──
   _tickReplying(now) {
     // SCRIBE_FRAME_MS 控制"写字速度"：够久没写才推进一帧，不然每个rAF都写、设置里的
-    // 速度滑块就是摆设（这是今天发现的一个真bug，之前根本没人读过这个值）
+    // 速度滑块不会生效
     if (!this._lastScribeStepAt || now - this._lastScribeStepAt >= CONFIG.SCRIBE_FRAME_MS) {
       this.scribe.step();
       this._lastScribeStepAt = now;
@@ -596,6 +596,25 @@ const LATIN_FONT_MAP = {
   wenkai: 'LXGW WenKai',
 };
 
+const CUSTOM_CJK_FAMILY = 'MissiveCustomCJK'; // 不带空格，避免 canvas font 字符串里要不要加引号的麻烦
+
+// 用户传了自定义中文字体的话，运行时动态注册成一个 FontFace，
+// 失败（文件坏了/网络问题）就安安静静退回默认的霞鹜文楷，不影响正常写字。
+async function loadCjkFont(s) {
+  if (s.cjkFont === 'custom' && s.hasCjkFont) {
+    try {
+      const face = new FontFace(CUSTOM_CJK_FAMILY, `url(/api/cjk-font-file?t=${Date.now()})`);
+      await face.load();
+      document.fonts.add(face);
+      CONFIG.CJK_FONT = CUSTOM_CJK_FAMILY;
+      return;
+    } catch (e) {
+      console.warn('自定义中文字体加载失败，用默认的霞鹜文楷:', e.message);
+    }
+  }
+  CONFIG.CJK_FONT = 'LXGW WenKai';
+}
+
 // 拉取运行时设置（写字速度 / 英文字体 / 首屏提示 / 纸张主题），合并进 CONFIG 或直接应用到页面。
 // 拉不到就用默认值，不阻塞启动。
 async function loadRuntimeConfig() {
@@ -604,6 +623,7 @@ async function loadRuntimeConfig() {
     if (!res.ok) return;
     const s = await res.json();
     if (s.font) CONFIG.LATIN_FONT = LATIN_FONT_MAP[s.font] || LATIN_FONT_MAP.pinyon;
+    await loadCjkFont(s);
     if (typeof s.speed === 'number') {
       const speed = Math.max(1, Math.min(10, s.speed));
       // speed 1(慢)~10(快) → 每帧间隔 30ms~6ms
@@ -688,7 +708,15 @@ function bindToolbar(app) {
   const brushPanel = $('brush-panel');
   const sizePicker = $('brush-size-picker');
 
-  $('btn-brush').addEventListener('click', () => brushPanel.classList.toggle('hidden'));
+  const btnBrush = $('btn-brush');
+  btnBrush.addEventListener('click', () => brushPanel.classList.toggle('hidden'));
+
+  // 点面板以外的任何地方（包括画布）就收起来，不然只能靠再点一次🖊关掉，容易一直挡着
+  document.addEventListener('pointerdown', (e) => {
+    if (brushPanel.classList.contains('hidden')) return;
+    if (brushPanel.contains(e.target) || btnBrush.contains(e.target)) return;
+    brushPanel.classList.add('hidden');
+  });
 
   function syncBrushUI() {
     sizePicker.value = CONFIG.BRUSH_SIZE;
@@ -1021,6 +1049,7 @@ function bindToolbar(app) {
   const overlay = $('type-overlay');
   const input = $('type-input');
   const openTyping = () => {
+    if (app.state !== S.LISTENING) return;
     overlay.classList.remove('hidden');
     input.value = '';
     input.focus();

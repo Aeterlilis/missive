@@ -16,10 +16,11 @@ const { INSTRUCTION } = require('./persona');
 
 const DATA_DIR = process.env.SETTINGS_DIR || __dirname;
 const BACKGROUND_PATH = path.join(DATA_DIR, 'background.jpg');
+const cjkFontPath = (ext) => path.join(DATA_DIR, 'cjk-font.' + ext);
 
 function createApp() {
   const app = express();
-  app.use(express.json({ limit: '12mb' })); // 背景图走 base64 JSON，得留够空间
+  app.use(express.json({ limit: '40mb' })); // 背景图/自定义字体都走 base64 JSON，中文字体文件常有 20MB+，得留够空间
   // 笔迹 PNG 通过裸body上传，体积小（<几百KB），内存暂存即可
   app.use(express.raw({ type: 'image/*', limit: '4mb' }));
   app.use(express.raw({ type: 'application/octet-stream', limit: '4mb' }));
@@ -42,7 +43,11 @@ function createApp() {
       speed: s.speed,
       hintText: s.hintText,
       theme: s.theme,
+      themeColor: s.themeColor,
       hasCustomBackground: fs.existsSync(BACKGROUND_PATH),
+      cjkFont: s.cjkFont,
+      cjkFontName: s.cjkFontName,
+      hasCjkFont: !!(s.cjkFontExt && fs.existsSync(cjkFontPath(s.cjkFontExt))),
       contextTurns: s.contextTurns,
       contextCount: history.recentContext(s.contextResetAt, s.contextTurns).length,
       autoSendEnabled: s.autoSendEnabled,
@@ -81,6 +86,7 @@ function createApp() {
     }
 
     s.contextResetAt = new Date().toISOString();
+    s.conversationId = (s.conversationId || 1) + 1;
     settingsStore.save(s);
     res.json({ ok: true, contextResetAt: s.contextResetAt, memoryCard });
   });
@@ -104,6 +110,62 @@ function createApp() {
     fs.createReadStream(BACKGROUND_PATH).pipe(res);
   });
 
+  // ─── 自定义中文手写字体 ───────────────────────────
+  // 上传/桌面版从系统字体库选，走的是同一个接口——不管字体文件从哪来，
+  // 到这里都是 {filename, fontDataBase64}，处理逻辑完全一样。
+  app.post('/api/cjk-font', (req, res) => {
+    const body = req.body || {};
+    const filename = String(body.filename || '').toLowerCase();
+    const m = /\.(ttf|otf|ttc)$/.exec(filename);
+    if (!m) return res.status(400).json({ error: '只支持 .ttf / .otf / .ttc 字体文件' });
+    const ext = m[1];
+    const base64 = String(body.fontDataBase64 || '');
+    if (!base64) return res.status(400).json({ error: '没收到字体数据' });
+    let buf;
+    try {
+      buf = Buffer.from(base64, 'base64');
+    } catch {
+      return res.status(400).json({ error: '字体数据格式不对' });
+    }
+    if (buf.length < 100) return res.status(400).json({ error: '字体文件看起来是空的' });
+    if (buf.length > 30 * 1024 * 1024) return res.status(400).json({ error: '字体文件太大了（超过30MB）' });
+
+    const s = settingsStore.load();
+    if (s.cjkFontExt) {
+      try { fs.unlinkSync(cjkFontPath(s.cjkFontExt)); } catch {} // 换字体了，把上一个（可能不同后缀）删掉，别攒垃圾
+    }
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(cjkFontPath(ext), buf);
+    s.cjkFont = 'custom';
+    s.cjkFontExt = ext;
+    s.cjkFontName = body.filename || ('自定义字体.' + ext);
+    settingsStore.save(s);
+    res.json({ ok: true, cjkFontName: s.cjkFontName });
+  });
+
+  app.get('/api/cjk-font-file', (req, res) => {
+    const s = settingsStore.load();
+    if (!s.cjkFontExt) return res.status(404).end();
+    const p = cjkFontPath(s.cjkFontExt);
+    if (!fs.existsSync(p)) return res.status(404).end();
+    const mime = s.cjkFontExt === 'otf' ? 'font/otf' : s.cjkFontExt === 'ttc' ? 'font/collection' : 'font/ttf';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'no-cache');
+    fs.createReadStream(p).pipe(res);
+  });
+
+  app.delete('/api/cjk-font', (req, res) => {
+    const s = settingsStore.load();
+    if (s.cjkFontExt) {
+      try { fs.unlinkSync(cjkFontPath(s.cjkFontExt)); } catch {}
+    }
+    s.cjkFont = 'default';
+    s.cjkFontExt = null;
+    s.cjkFontName = '';
+    settingsStore.save(s);
+    res.json({ ok: true });
+  });
+
   // 全局设置（人设/速度/字体/回答长度/首屏提示/背景主题/切换当前配置）
   app.post('/api/settings', (req, res) => {
     const s = settingsStore.load();
@@ -114,6 +176,10 @@ function createApp() {
     if (typeof body.speed === 'number') next.speed = Math.max(1, Math.min(10, body.speed));
     if (typeof body.hintText === 'string') next.hintText = body.hintText;
     if (typeof body.theme === 'string') next.theme = body.theme;
+    if (typeof body.themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.themeColor)) {
+      next.themeColor = body.themeColor.toLowerCase();
+    }
+    if (body.cjkFont === 'default' || body.cjkFont === 'custom') next.cjkFont = body.cjkFont;
     if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;
     if (typeof body.autoSendSeconds === 'number' && body.autoSendSeconds > 0) {
       next.autoSendSeconds = Math.max(0.5, Math.min(20, body.autoSendSeconds));
@@ -357,7 +423,7 @@ function createApp() {
     // 流跑完了：把这一轮存进历史，下一轮才能接上上下文
     const saveTurn = () => {
       if (fullText.trim()) {
-        history.append({ kind: 'ink', imageDataUrl: currentImageDataUrl, reply: fullText });
+        history.append({ kind: 'ink', imageDataUrl: currentImageDataUrl, reply: fullText, conversationId: s.conversationId || 1 });
       }
     };
 
@@ -480,7 +546,7 @@ function createApp() {
 
     const saveTurn = () => {
       if (fullText.trim()) {
-        history.append({ kind: 'typed', userText: text, reply: fullText });
+        history.append({ kind: 'typed', userText: text, reply: fullText, conversationId: s.conversationId || 1 });
       }
     };
 

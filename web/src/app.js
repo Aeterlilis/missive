@@ -299,8 +299,9 @@ class App {
   }
 
   // ─── DRINKING：饮墨淡出用户字迹（或导入的图片）──
-  // 手写不好精确按笔画拆分（字距不规律，容易互相框进快照里），干脆整页一起淡出，
-  // 简单、稳，不会有"块状"的毛病。有背景图的话背景图跟着一起淡。
+  // 跟 FADING 用的是同一套"整块快照 + 左到右擦除带"（_paintWipedSnapshot），
+  // 不用像早期版本那样纠结"按笔画拆分不好办"——反正现在整段一起当一张图处理，
+  // 不需要精确拆到每一笔，手写字距不规律也不影响。有背景图的话背景图跟着一起走。
   _tickDrinking(now) {
     if (!this._drinkSnapshot) {
       const bbox = this.hasBgImage ? this._bgRect : (() => {
@@ -322,9 +323,8 @@ class App {
     }
 
     const t = Math.min(1, (now - this._drinkStart) / CONFIG.DRINK_FADE_MS);
-    const remain = 1 - t;
-    this._paintFadedSnapshot(this.ctx, this._drinkSnapshot, this._drinkBBox, remain);
-    if (this._drinkBgSnapshot) this._paintFadedSnapshot(this.bgCtx, this._drinkBgSnapshot, this._drinkBBox, remain);
+    this._paintWipedSnapshot(this.ctx, this._drinkSnapshot, this._drinkBBox, t);
+    if (this._drinkBgSnapshot) this._paintWipedSnapshot(this.bgCtx, this._drinkBgSnapshot, this._drinkBBox, t);
 
     if (t >= 1) {
       clearRegion(this.ctx, this._drinkBBox);
@@ -333,17 +333,6 @@ class App {
       this._drinkBgSnapshot = null;
       this._finishDrinking(now);
     }
-  }
-
-  // 把一份快照按 remain(0~1) 的透明度比例画回 ctx 里，DRINKING/FADING 通用
-  _paintFadedSnapshot(ctx, src, bbox, remain) {
-    const out = ctx.createImageData(src.width, src.height);
-    const sd = src.data, od = out.data;
-    for (let i = 0; i < sd.length; i += 4) {
-      od[i] = sd[i]; od[i + 1] = sd[i + 1]; od[i + 2] = sd[i + 2];
-      od[i + 3] = Math.round(sd[i + 3] * remain);
-    }
-    ctx.putImageData(out, bbox.minX, bbox.minY);
   }
 
   // 饮墨阶段收尾：不管走的哪条路径，最后都汇到这里决定下一步
@@ -484,6 +473,7 @@ class App {
   // 把快照按 t(0~1) 从左到右"吸走"：整体上还是一条线从左扫到右，
   // 但每个像素的实际擦除位置叠加了一点噪声抖动，边缘揉成不规则的毛边/墨渍状，
   // 不是一把尺子刮过去的硬边擦除——更像纸在啃噬墨迹，而不是被擦掉。
+  // DRINKING（用户笔迹/导入图片）、FADING（AI回复）通用同一套。
   _paintWipedSnapshot(ctx, src, bbox, t) {
     const w = src.width, h = src.height;
     const feather = Math.min(200, Math.max(70, w * 0.35));

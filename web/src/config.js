@@ -91,6 +91,14 @@ export const BRUSH_PRESETS = {
   // 马克笔：明显更粗 + 半透明，笔画交叠的地方会自然叠深，跟真马克笔一样
   marker: { defaultSize: 18, thinning: 0.05, smoothing: 0.6, streamline: 0.6, alpha: 0.55 },
   brush: { defaultSize: 10, thinning: 0.85, smoothing: 0.6, streamline: 0.35, alpha: 1 },
+  // 尖笔：蘸水笔那种会张开的簧片尖，粗细完全看下笔力度——主干笔画故意压重写粗，
+  // 牵丝花饰故意提轻写细，铜版体/圆体英文花体字就靠这个粗细反差认字。
+  // thinning 拉到接近满，压感差异会被放大成很夸张的粗细对比。
+  pointed: { defaultSize: 16, thinning: 0.8, smoothing: 0.5, streamline: 0.6, alpha: 1 },
+  // 平笔：扁头笔尖，粗细跟压感/速度无关，只看笔画方向跟笔尖固定角度的夹角——
+  // 顺着笔尖方向写就粗，垂直方向写就细，这就是书法笔那种粗细变化的来源。
+  // 走的是完全不同的渲染路径（见 ink.js 的 chisel 分支），不用 perfect-freehand 那套。
+  flat: { defaultSize: 16, chisel: true, nibAngleDeg: 45, alpha: 1 },
 };
 
 // 颜色：墨水屏只认纯黑白，不要灰度（残影重）

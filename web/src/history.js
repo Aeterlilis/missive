@@ -4,18 +4,20 @@ const listEl = document.getElementById('list');
 const emptyHint = document.getElementById('emptyHint');
 
 // 背景跟写字页/设置页保持一致，用同一套 body.theme-* class（见 paper-theme.css）
-const THEME_CLASSES = ['theme-kraft', 'theme-parchment', 'theme-lined', 'theme-grid', 'theme-custom'];
-function applyTheme(theme) {
+const THEME_CLASSES = ['theme-parchment', 'theme-lined', 'theme-grid', 'theme-xuanzhi', 'theme-watercolor', 'theme-crumpled', 'theme-black', 'theme-custom'];
+function applyTheme(theme, bgColor) {
   document.body.classList.remove(...THEME_CLASSES);
-  document.body.style.backgroundImage = '';
+  document.body.style.background = '';
   if (theme === 'custom') {
     document.body.classList.add('theme-custom');
     document.body.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+  } else if (theme === 'solid') {
+    document.body.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
     document.body.classList.add('theme-' + theme);
   }
 }
-fetch('/api/settings').then((r) => r.json()).then((s) => applyTheme(s.theme)).catch(() => {});
+fetch('/api/settings').then((r) => r.json()).then((s) => applyTheme(s.theme, s.bgColor)).catch(() => {});
 
 function fmtDate(iso) {
   const d = new Date(iso);

@@ -76,7 +76,7 @@ body.debug #debug { display: block; }
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: "LXGW WenKai", serif;
+  font-family: var(--hint-font, "LXGW WenKai"), serif;
   font-size: 28px;
   color: #000;
   opacity: 1;
@@ -86,6 +86,8 @@ body.debug #debug { display: block; }
   text-align: center;
 }
 #hint.fade { opacity: 0; }
+/* 黑纸背景上黑字看不见，首屏提示得跟着换成白字 */
+body.theme-black #hint { color: #fff; }
 
 /* 圆形图标按钮：工具栏按钮 + 右上角历史/设置入口共用同一套样式，
    保证"常驻入口"和"临时工具"视觉上是一套东西，不再有一个淡一个实的割裂感 */
@@ -172,46 +174,11 @@ body.debug #debug { display: block; }
   opacity: 0.55;
 }
 .brush-presets button:hover { opacity: 0.85; }
-.brush-presets button.active { opacity: 1; background: #000; color: #fff; }
+.brush-presets button.active { opacity: 1; background: var(--accent, #000); color: #fff; }
 .brush-controls { display: flex; align-items: center; gap: 10px; }
 .brush-controls input[type="range"] { flex: 1; }
 
-/* 颜色预设 + 自定义色轮，替代原生 <input type=color>（很多设备/浏览器根本不支持弹出系统调色盘） */
-.color-presets { display: flex; gap: 6px; }
-.color-swatch {
-  width: 22px; height: 22px; border-radius: 50%; border: 1px solid #000;
-  padding: 0; cursor: pointer; opacity: 0.55;
-}
-.color-swatch:hover { opacity: 0.85; }
-.color-swatch.active { opacity: 1; outline: 2px solid #000; outline-offset: 2px; }
-.color-swatch-custom {
-  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
-}
-#color-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 4px;
-}
-.color-mode-tabs { display: flex; gap: 6px; }
-.color-mode-tab {
-  background: #fff; color: #000; border: 1px solid #000; border-radius: 14px;
-  padding: 3px 10px; font-size: 12px; cursor: pointer; opacity: 0.55;
-}
-.color-mode-tab:hover { opacity: 0.85; }
-.color-mode-tab.active { opacity: 1; background: #000; color: #fff; }
-#color-mode-square { display: flex; flex-direction: column; gap: 6px; }
-#color-panel canvas {
-  width: 160px; border: 1px solid #000; border-radius: 4px; cursor: crosshair;
-  display: block; align-self: flex-start;
-}
-#color-wheel { border-radius: 50%; align-self: center; }
-.color-panel-row { display: flex; align-items: center; gap: 8px; }
-.color-panel-row .color-swatch { cursor: default; opacity: 1; flex-shrink: 0; }
-#color-hex {
-  flex: 1; border: 1px solid #000; border-radius: 4px; padding: 4px 6px;
-  font: 13px/1 monospace; text-transform: lowercase;
-}
+/* 颜色预设 + 自定义色轮的样式在 color-picker.css 里（跟设置页的选色盘共用一份） */
 
 /* 打字模式覆盖层 */
 #type-overlay {

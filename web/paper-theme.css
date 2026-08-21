@@ -1,14 +1,12 @@
 /* 纸张主题背景：写字页/设置页/历史记录页共用，保证三个页面背景一致。
-   画在 body 上；纯白主题不需要额外规则，就是 body 的默认背景色。 */
-body.theme-kraft {
-  background: #d9c4a0;
-  background-image:
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(70,50,20,0.12) 100%);
-}
+   画在 body 上；theme:'white' 是旧版遗留的兜底值（不再有对应按钮，就是 body 的默认背景色），不需要额外规则。
+   纯色背景（theme-solid）不走这里——颜色是用户自己调的，直接写成内联 style，见各页面的 applyTheme()。 */
 body.theme-parchment {
-  background: #f1e6cc;
-  background-image:
-    radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(90,70,30,0.16) 100%);
+  background-color: #e9dcb8;
+  background-image: url('backgrounds/parchment.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 body.theme-lined {
   background: #ffffff;
@@ -31,4 +29,34 @@ body.theme-grid {
   background-image:
     repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(0,0,0,0.10) 32px),
     repeating-linear-gradient(to right, transparent 0, transparent 31px, rgba(0,0,0,0.10) 32px);
+}
+
+/* 预装的实拍纸张背景：跟 theme-custom 一样铺满，只是图换成自带的 */
+body.theme-xuanzhi {
+  background-color: #f2ede0;
+  background-image: url('backgrounds/xuanzhi.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+body.theme-watercolor {
+  background-color: #f5f1e8;
+  background-image: url('backgrounds/watercolor.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+body.theme-crumpled {
+  background-color: #f0f0ee;
+  background-image: url('backgrounds/crumpled.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+body.theme-black {
+  background-color: #111111;
+  background-image: url('backgrounds/black.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }

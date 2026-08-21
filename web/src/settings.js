@@ -8,6 +8,7 @@ const statusEl = $('status');
 let data = null;             // 最近一次从服务器拉到的完整设置
 let currentProfileId = null; // 当前"待启用"的配置槽位（真正生效要点保存）
 let themeColorHex = '#000000'; // 开关/滑块的统一主题色
+let bgColorHex = '#ffffff';    // 纸张背景选"纯色"时用的颜色
 
 function setStatus(text, isError) {
   statusEl.textContent = text;
@@ -15,17 +16,25 @@ function setStatus(text, isError) {
   if (text) setTimeout(() => { statusEl.textContent = ''; }, 3000);
 }
 
-// 背景跟写字页保持一致，用同一套 body.theme-* class（见 paper-theme.css）
-const THEME_CLASSES = ['theme-kraft', 'theme-parchment', 'theme-lined', 'theme-grid', 'theme-custom'];
-function applyTheme(theme) {
+// 背景跟写字页保持一致，用同一套 body.theme-* class（见 paper-theme.css）。
+// "纯色"（solid）不在这里——颜色是用户自己调的，直接内联 style，不走 class。
+const THEME_CLASSES = ['theme-parchment', 'theme-lined', 'theme-grid', 'theme-xuanzhi', 'theme-watercolor', 'theme-crumpled', 'theme-black', 'theme-custom'];
+function applyTheme(theme, bgColor) {
   document.body.classList.remove(...THEME_CLASSES);
-  document.body.style.backgroundImage = '';
+  document.body.style.background = ''; // 先清掉上一个主题可能留下的内联背景（自定义图片/纯色都是内联设的）
   if (theme === 'custom') {
     document.body.classList.add('theme-custom');
     document.body.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+  } else if (theme === 'solid') {
+    document.body.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
     document.body.classList.add('theme-' + theme);
   }
+}
+
+// "纯色"选好之后才会露出下面这块选色盘，切到别的背景就收起来
+function syncBgPickerVisibility(theme) {
+  $('bg-solid-color-picker').classList.toggle('hidden', theme !== 'solid');
 }
 
 // 单选胶囊组（字体/纸张背景都用这个）：点哪个哪个变黑，data-value 就是选中值。
@@ -59,7 +68,7 @@ function fileToBase64(file) {
 function setupCjkFontPills() {
   const wrap = document.querySelector('.option-pills[data-group="cjkFont"]');
   const customPill = $('cjkFontCustomPill');
-  const defaultPill = wrap.querySelector('.option-pill[data-value="default"]');
+  const presetPills = [...wrap.querySelectorAll('.option-pill')].filter((p) => p.tagName !== 'LABEL'); // 排除"上传字体文件"那个 <label>，它靠 change 事件选中
   const fileInput = $('cjkFontFile');
 
   function setActive(value) {
@@ -69,7 +78,7 @@ function setupCjkFontPills() {
     return wrap.querySelector('.option-pill.active')?.dataset.value || 'default';
   }
 
-  defaultPill.addEventListener('click', () => setActive('default'));
+  presetPills.forEach((p) => p.addEventListener('click', () => setActive(p.dataset.value)));
 
   async function uploadFontBase64(base64, filename) {
     const prevText = customPill.textContent;
@@ -132,24 +141,25 @@ function applyThemeColor(hex) {
   document.documentElement.style.setProperty('--accent', hex);
 }
 
-// 主题色选色盘——跟写字页笔刷颜色（app.js）那套预设色块+方形/色环自定义面板完全同一份代码，
-// 照搬过来的，就是把 CONFIG.INK_COLOR 换成这里的 themeColorHex。
-function setupThemeColorPicker() {
-  const panel = $('theme-color-panel');
-  const svCanvas = $('theme-color-sv');
-  const hueCanvas = $('theme-color-hue');
-  const wheelCanvas = $('theme-color-wheel');
-  const modeSquare = $('theme-color-mode-square');
+// 通用 HSB方形/色环 选色盘——主题色跟纸张纯色背景共用同一份实现，靠 ids/presetsSelector 挂到不同的 DOM 上。
+// 跟写字页笔刷颜色（app.js）那套预设色块+方形/色环自定义面板也是完全同一套算法。
+function setupColorPicker({ ids, presetsSelector, getInitial, onChange, statusMsg }) {
+  const panel = $(ids.panel);
+  const svCanvas = $(ids.sv);
+  const hueCanvas = $(ids.hue);
+  const wheelCanvas = $(ids.wheel);
+  const modeSquare = $(ids.modeSquare);
   const modeTabs = panel.querySelectorAll('.color-mode-tab');
   const svCtx = svCanvas.getContext('2d');
   const hueCtx = hueCanvas.getContext('2d');
   const wheelCtx = wheelCanvas.getContext('2d');
-  const colorPreview = $('theme-color-preview');
-  const colorHex = $('theme-color-hex');
-  const btnCustomColor = $('btn-theme-custom-color');
-  const presetSwatches = document.querySelectorAll('#sec-appearance .color-presets .color-swatch[data-color]');
+  const colorPreview = $(ids.preview);
+  const colorHex = $(ids.hex);
+  const btnCustomColor = $(ids.customBtn);
+  const presetSwatches = document.querySelectorAll(presetsSelector);
   const presetColors = Array.from(presetSwatches).map((b) => b.dataset.color.toLowerCase());
 
+  let currentHex = getInitial();
   let hue = 0, sat = 0, val = 0;
 
   function hexToRgb(hex) {
@@ -333,11 +343,12 @@ function setupThemeColorPicker() {
   function applyCustomColor(save) {
     const [r, g, b] = hsvToRgb(hue, sat, val);
     const hex = rgbToHex(r, g, b);
-    applyThemeColor(hex);
+    currentHex = hex;
+    onChange(hex);
     colorHex.value = hex;
     colorPreview.style.background = hex;
     syncColorUI();
-    if (save) setStatus('主题色已更新，记得点保存');
+    if (save) setStatus(statusMsg);
   }
 
   function setHueFromEvent(e) {
@@ -380,39 +391,41 @@ function setupThemeColorPicker() {
     const opening = panel.classList.contains('hidden');
     panel.classList.toggle('hidden');
     if (opening) {
-      [hue, sat, val] = rgbToHsv(...hexToRgb(themeColorHex));
+      [hue, sat, val] = rgbToHsv(...hexToRgb(currentHex));
       drawHueStrip();
       drawSvSquare();
       drawWheel();
-      colorHex.value = themeColorHex;
-      colorPreview.style.background = themeColorHex;
+      colorHex.value = currentHex;
+      colorPreview.style.background = currentHex;
     }
   });
 
   colorHex.addEventListener('change', () => {
     let hex = colorHex.value.trim().toLowerCase();
     if (!hex.startsWith('#')) hex = '#' + hex;
-    if (!/^#[0-9a-f]{6}$/.test(hex)) { colorHex.value = themeColorHex; return; }
+    if (!/^#[0-9a-f]{6}$/.test(hex)) { colorHex.value = currentHex; return; }
+    currentHex = hex;
     [hue, sat, val] = rgbToHsv(...hexToRgb(hex));
     drawSvSquare();
     drawWheel();
-    applyThemeColor(hex);
+    onChange(hex);
     colorPreview.style.background = hex;
     syncColorUI();
-    setStatus('主题色已更新，记得点保存');
+    setStatus(statusMsg);
   });
 
   presetSwatches.forEach((btn) => {
     btn.addEventListener('click', () => {
-      applyThemeColor(btn.dataset.color);
+      currentHex = btn.dataset.color;
+      onChange(currentHex);
       panel.classList.add('hidden');
       syncColorUI();
-      setStatus('主题色已更新，记得点保存');
+      setStatus(statusMsg);
     });
   });
 
   function syncColorUI() {
-    const current = themeColorHex.toLowerCase();
+    const current = currentHex.toLowerCase();
     const isPreset = presetColors.includes(current);
     presetSwatches.forEach((b) => {
       b.classList.toggle('active', b.dataset.color.toLowerCase() === current);
@@ -421,8 +434,13 @@ function setupThemeColorPicker() {
     btnCustomColor.style.background = isPreset ? '' : current;
   }
 
-  // 供 load() 在拉到 themeColor 之后调用，把选色盘UI同步成当前值
-  return { syncColorUI };
+  // 供 load() 在拉到服务器的值之后调用，把选色盘UI同步成当前值（不触发 onChange/保存提示）
+  function setHex(hex) {
+    currentHex = hex;
+    syncColorUI();
+  }
+
+  return { syncColorUI, setHex };
 }
 
 // 分区导航：点了跳转（浏览器原生锚点跳转即可，html{scroll-behavior:smooth}负责平滑），
@@ -666,7 +684,7 @@ function buildProfileCard(profile) {
   return card;
 }
 
-// ─── 提示词卡片（人设/记忆，堆叠展示，开关可多选） ─────────
+// ─── 提示词卡片（人设/记忆/系统提示词/首屏提示语，堆叠展示，开关可多选） ─────────
 function buildPromptCard(cardData) {
   const card = document.createElement('div');
   card.className = 'card prompt-card';
@@ -728,67 +746,8 @@ function buildPromptCard(cardData) {
   return card;
 }
 
-// ─── 系统提示词：不堆叠，平铺一条条，右边一个开关 ──────────
-function buildFlatRow(cardData) {
-  const row = document.createElement('div');
-  row.className = 'flat-row prompt-card';
-  row.dataset.id = cardData.id;
-
-  const top = document.createElement('div');
-  top.className = 'flat-row-top';
-
-  const titleInput = document.createElement('input');
-  titleInput.type = 'text';
-  titleInput.className = 'flat-row-title field-title';
-  titleInput.value = cardData.title || '';
-  titleInput.readOnly = true;
-  const sw = buildSwitch(cardData.enabled, 'field-enabled');
-
-  const delBtn = document.createElement('button');
-  delBtn.type = 'button';
-  delBtn.className = 'flat-row-delete';
-  delBtn.textContent = '删除';
-  delBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!confirm(`删除"${cardData.title}"？`)) return;
-    try {
-      const res = await fetch('/api/cards/' + cardData.id, { method: 'DELETE' });
-      if (!res.ok) throw new Error((await res.json()).error || '删除失败');
-      await load();
-      setStatus('已删除');
-    } catch (err) {
-      setStatus('删除失败: ' + err.message, true);
-    }
-  });
-
-  top.appendChild(titleInput);
-  top.appendChild(sw);
-  top.appendChild(delBtn);
-
-  const body = document.createElement('div');
-  body.className = 'flat-row-body';
-  const ta = document.createElement('textarea');
-  ta.className = 'field-content';
-  ta.value = cardData.content || '';
-  ta.readOnly = true;
-  body.appendChild(ta);
-
-  row.appendChild(top);
-  row.appendChild(body);
-
-  top.addEventListener('click', (e) => {
-    if (sw.contains(e.target) || e.target === delBtn) return;
-    const editing = !row.classList.contains('editing');
-    row.classList.toggle('editing', editing);
-    titleInput.readOnly = !editing;
-    ta.readOnly = !editing;
-  });
-
-  return row;
-}
-
 // ─── 卡片组渲染：堆叠态默认收起，只露前面一张 ──────────────
-const stackState = { profiles: true, ai_persona: true, user_persona: true, long_term_memory: true };
+const stackState = { profiles: true, ai_persona: true, user_persona: true, long_term_memory: true, other: true, hint: true };
 
 function renderCardStack(category, exclusive) {
   const stackEl = document.querySelector(`.card-stack[data-stack="${category}"]`);
@@ -814,26 +773,13 @@ function renderCardStack(category, exclusive) {
   stackEl.classList.toggle('has-more', items.length > 1);
 }
 
-function renderFlatList(category) {
-  const list = document.querySelector(`.card-list-flat[data-list="${category}"]`);
-  list.innerHTML = '';
-  const cards = data.promptCards.filter((c) => c.category === category);
-  if (cards.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'card-empty';
-    empty.textContent = '还没有条目';
-    list.appendChild(empty);
-    return;
-  }
-  for (const c of cards) list.appendChild(buildFlatRow(c));
-}
-
 function renderAllCards() {
   renderCardStack('profiles', true);
   renderCardStack('ai_persona', false);
   renderCardStack('user_persona', false);
   renderCardStack('long_term_memory', false);
-  renderFlatList('other');
+  renderCardStack('other', false);
+  renderCardStack('hint', false);
 }
 
 // 组标题（"配置槽位"/"AI 人设"这些字）本身也能点，展开/收起整组——
@@ -901,12 +847,14 @@ async function load() {
     $('speed').value = data.speed || 6;
     fontPills.setActive(data.font || 'pinyon');
 
-    $('hintText').value = data.hintText || '';
     const theme = data.theme || 'white';
     themePills.setActive(theme);
-    applyTheme(theme);
+    bgColorHex = data.bgColor || '#ffffff';
+    applyTheme(theme, bgColorHex);
+    syncBgPickerVisibility(theme);
+    bgColorPicker.setHex(bgColorHex);
     applyThemeColor(data.themeColor || '#000000');
-    themeColorPicker.syncColorUI();
+    themeColorPicker.setHex(data.themeColor || '#000000');
 
     cjkFontPills.setActive(data.cjkFont || 'default');
     $('cjkFontCustomPill').textContent = data.hasCjkFont ? (data.cjkFontName || '自定义字体') : '上传字体文件';
@@ -953,7 +901,8 @@ $('bgFile').addEventListener('change', async () => {
     const out = await res.json();
     if (!res.ok) throw new Error(out.error || '上传失败');
     themePills.setActive('custom');
-    applyTheme('custom');
+    applyTheme('custom', bgColorHex);
+    syncBgPickerVisibility('custom');
     customPill.style.backgroundImage = `url(${imageDataUrl})`;
     customPill.classList.add('has-image');
     customPill.textContent = '';
@@ -1056,9 +1005,9 @@ async function saveAll() {
         maxTokens: parseInt($('maxTokens').value, 10) || 280,
         speed: parseInt($('speed').value, 10) || 6,
         font,
-        hintText: $('hintText').value,
         theme,
         themeColor: themeColorHex,
+        bgColor: bgColorHex,
         cjkFont: cjkFontPills.getActive(),
         autoSendEnabled: $('autoSendEnabled').checked,
         autoSendSeconds: parseFloat($('autoSendSeconds').value) || 2.8,
@@ -1082,9 +1031,31 @@ async function saveAll() {
 form.addEventListener('submit', (e) => { e.preventDefault(); saveAll(); });
 $('save').addEventListener('click', saveAll);
 
-const themeColorPicker = setupThemeColorPicker();
+const themeColorPicker = setupColorPicker({
+  ids: {
+    panel: 'theme-color-panel', sv: 'theme-color-sv', hue: 'theme-color-hue', wheel: 'theme-color-wheel',
+    modeSquare: 'theme-color-mode-square', preview: 'theme-color-preview', hex: 'theme-color-hex', customBtn: 'btn-theme-custom-color',
+  },
+  presetsSelector: '#theme-color-presets .color-swatch[data-color]',
+  getInitial: () => themeColorHex,
+  onChange: applyThemeColor,
+  statusMsg: '主题色已更新，记得点保存',
+});
+const bgColorPicker = setupColorPicker({
+  ids: {
+    panel: 'bg-color-panel', sv: 'bg-color-sv', hue: 'bg-color-hue', wheel: 'bg-color-wheel',
+    modeSquare: 'bg-color-mode-square', preview: 'bg-color-preview', hex: 'bg-color-hex', customBtn: 'btn-bg-custom-color',
+  },
+  presetsSelector: '#bg-color-presets .color-swatch[data-color]',
+  getInitial: () => bgColorHex,
+  onChange: (hex) => { bgColorHex = hex; applyTheme('solid', hex); },
+  statusMsg: '背景色已更新，记得点保存',
+});
 const fontPills = setupOptionPills('font');
-const themePills = setupOptionPills('theme', (value) => applyTheme(value)); // 点了就实时预览纸张背景
+const themePills = setupOptionPills('theme', (value) => {
+  applyTheme(value, bgColorHex);
+  syncBgPickerVisibility(value);
+}); // 点了就实时预览纸张背景
 const cjkFontPills = setupCjkFontPills();
 load();
 setupSectionNav();

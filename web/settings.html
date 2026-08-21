@@ -7,6 +7,7 @@
   <link rel="icon" href="icon.png" />
   <title>Missive · 设置</title>
   <link rel="stylesheet" href="paper-theme.css" />
+  <link rel="stylesheet" href="color-picker.css" />
   <link rel="stylesheet" href="settings.css" />
 </head>
 <body>
@@ -34,7 +35,7 @@
         <h2>API 配置</h2>
         <div class="card-group" data-group="profiles">
           <div class="card-group-head">
-            <span class="card-group-title">配置槽位</span>
+            <span class="card-group-title">配置卡片</span>
             <button type="button" class="add-btn" id="addProfile" title="新建配置">＋</button>
           </div>
           <div class="card-stack" data-stack="profiles"></div>
@@ -47,19 +48,19 @@
 
       <section id="sec-system-prompt">
         <h2>系统提示词</h2>
-        <p class="hint">除了人设之外，想一直额外发给 AI 的提示词，可以建好几条，单独开关。</p>
+        <p class="hint">所有开启状态的卡片内容会同时生效。</p>
         <div class="card-group" data-group="other">
           <div class="card-group-head">
             <span class="card-group-title">提示词列表</span>
             <button type="button" class="add-btn" data-add="other" title="新建">＋</button>
           </div>
-          <div class="card-list-flat" data-list="other"></div>
+          <div class="card-stack" data-stack="other"></div>
         </div>
       </section>
 
       <section id="sec-persona">
         <h2>人设</h2>
-        <p class="hint">开着的卡片内容会拼在一起发给 AI，可以同时开好几张。</p>
+        <p class="hint">所有开启状态的卡片内容会同时生效。</p>
         <div class="card-group" data-group="ai_persona">
           <div class="card-group-head">
             <span class="card-group-title">AI 人设</span>
@@ -79,8 +80,7 @@
       <section id="sec-memory">
         <h2>记忆</h2>
         <p class="hint">
-          AI 回复时会参考最近几轮写过的内容，当前记着 <b id="contextCount">-</b> 轮（最多 <span id="contextMax">10</span> 轮）。
-          想让它忘掉之前聊的、重新开始，点下面这个按钮。
+          AI 回复时会参考最近几轮写过的内容，当前记忆 <b id="contextCount">-</b> 轮（最多 <span id="contextMax">10</span> 轮）。
         </p>
         <label class="switch-row">
           <span>重置前先让 AI 总结这段对话，存成"长期记忆"卡片</span>
@@ -103,14 +103,21 @@
         <h3>英文回答字体</h3>
         <div class="option-pills" data-group="font">
           <button type="button" class="option-pill" data-value="pinyon">花体连笔</button>
-          <button type="button" class="option-pill" data-value="medieval">西幻哥特体</button>
-          <button type="button" class="option-pill" data-value="wenkai">统一用文楷</button>
+          <button type="button" class="option-pill" data-value="medieval">西幻哥特</button>
+          <button type="button" class="option-pill" data-value="wenkai">霞鹜文楷</button>
+          <button type="button" class="option-pill" data-value="manufacturing">油墨印章体</button>
+          <button type="button" class="option-pill" data-value="monsieur">华丽花体</button>
+          <button type="button" class="option-pill" data-value="mysoul">俏皮手写体</button>
         </div>
 
         <h3 style="margin-top:20px">中文手写字体</h3>
-        <p class="hint">影响AI回复里所有中文字符怎么"写"出来，默认是霞鹜文楷。</p>
-        <div class="option-pills option-pills-2col" data-group="cjkFont">
-          <button type="button" class="option-pill" data-value="default">默认（霞鹜文楷）</button>
+        <p class="hint"></p>
+        <div class="option-pills" data-group="cjkFont">
+          <button type="button" class="option-pill" data-value="default">霞鹜文楷</button>
+          <button type="button" class="option-pill" data-value="liujian">草书连笔</button>
+          <button type="button" class="option-pill" data-value="zhimang">行书体</button>
+          <button type="button" class="option-pill" data-value="notoserif">宋体</button>
+          <button type="button" class="option-pill" data-value="kuaile">快乐体</button>
           <label id="cjkFontCustomPill" class="option-pill" data-value="custom" for="cjkFontFile">上传字体文件</label>
         </div>
         <input type="file" id="cjkFontFile" accept=".ttf,.otf,.ttc" class="visually-hidden" />
@@ -120,23 +127,58 @@
         </div>
 
         <h3 style="margin-top:20px">首屏提示文字</h3>
-        <p class="hint">刚打开、还没写字时页面中间显示的引导语。第一行正常大小，之后每行会变小变淡（换行请直接回车）。</p>
-        <textarea id="hintText" rows="2"></textarea>
+        <p class="hint">开屏页面引导语，第一行正常大小，换行会变小变淡。开着不止一张的话，每天随机显示其中一张。</p>
+        <div class="card-group" data-group="hint">
+          <div class="card-group-head">
+            <span class="card-group-title">提示语列表</span>
+            <button type="button" class="add-btn" data-add="hint" title="新建">＋</button>
+          </div>
+          <div class="card-stack" data-stack="hint"></div>
+        </div>
 
         <h3 style="margin-top:20px">纸张背景</h3>
         <div class="option-pills" data-group="theme">
-          <button type="button" class="option-pill" data-value="white">纯白</button>
-          <button type="button" class="option-pill" data-value="kraft">牛皮纸</button>
           <button type="button" class="option-pill" data-value="parchment">羊皮纸</button>
-          <button type="button" class="option-pill" data-value="lined">横线笔记本</button>
-          <button type="button" class="option-pill" data-value="grid">方格</button>
+          <button type="button" class="option-pill" data-value="lined">横格本</button>
+          <button type="button" class="option-pill" data-value="grid">方格本</button>
+          <button type="button" class="option-pill" data-value="xuanzhi">宣纸</button>
+          <button type="button" class="option-pill" data-value="watercolor">水彩纸</button>
+          <button type="button" class="option-pill" data-value="crumpled">皱纸</button>
+          <button type="button" class="option-pill" data-value="black">黑纸</button>
+          <button type="button" class="option-pill" data-value="solid">纯色</button>
           <label id="customThemePill" class="option-pill option-pill-custom" data-value="custom" for="bgFile">上传图片</label>
         </div>
         <input type="file" id="bgFile" accept="image/png,image/jpeg" class="visually-hidden" />
 
+        <div id="bg-solid-color-picker" class="hidden">
+          <div id="bg-color-presets" class="color-presets">
+            <button type="button" class="color-swatch" data-color="#ffffff" title="纯白" style="background:#ffffff"></button>
+            <button type="button" class="color-swatch" data-color="#f1e6cc" title="米黄" style="background:#f1e6cc"></button>
+            <button type="button" class="color-swatch" data-color="#d9c4a0" title="牛皮纸色" style="background:#d9c4a0"></button>
+            <button type="button" class="color-swatch" data-color="#e8e8e8" title="浅灰" style="background:#e8e8e8"></button>
+            <button type="button" class="color-swatch" data-color="#dce8f0" title="淡蓝" style="background:#dce8f0"></button>
+            <button type="button" id="btn-bg-custom-color" class="color-swatch color-swatch-custom" title="自定义颜色"></button>
+          </div>
+          <div id="bg-color-panel" class="color-picker-panel hidden">
+            <div class="color-mode-tabs">
+              <button type="button" class="color-mode-tab active" data-mode="square">HSB</button>
+              <button type="button" class="color-mode-tab" data-mode="wheel">色环</button>
+            </div>
+            <div id="bg-color-mode-square" class="color-mode-square">
+              <canvas id="bg-color-sv" width="160" height="90"></canvas>
+              <canvas id="bg-color-hue" width="160" height="14"></canvas>
+            </div>
+            <canvas id="bg-color-wheel" width="160" height="160" class="color-wheel hidden"></canvas>
+            <div class="color-panel-row">
+              <span id="bg-color-preview" class="color-swatch"></span>
+              <input type="text" id="bg-color-hex" class="color-hex-input" maxlength="7" spellcheck="false" />
+            </div>
+          </div>
+        </div>
+
         <h3 style="margin-top:20px">主题色</h3>
-        <p class="hint">开关、滑块这些控件统一用这个颜色，跟写字页笔刷颜色是同一套选色盘。</p>
-        <div class="color-presets">
+        <p class="hint"></p>
+        <div id="theme-color-presets" class="color-presets">
           <button type="button" class="color-swatch" data-color="#000000" title="曜石黑" style="background:#000000"></button>
           <button type="button" class="color-swatch" data-color="#1d2951" title="藏青" style="background:#1d2951"></button>
           <button type="button" class="color-swatch" data-color="#5c3a21" title="赭石" style="background:#5c3a21"></button>
@@ -144,19 +186,19 @@
           <button type="button" class="color-swatch" data-color="#1f4d3a" title="墨绿" style="background:#1f4d3a"></button>
           <button type="button" id="btn-theme-custom-color" class="color-swatch color-swatch-custom" title="自定义颜色"></button>
         </div>
-        <div id="theme-color-panel" class="hidden">
+        <div id="theme-color-panel" class="color-picker-panel hidden">
           <div class="color-mode-tabs">
-            <button type="button" class="color-mode-tab active" data-mode="square">方形</button>
+            <button type="button" class="color-mode-tab active" data-mode="square">HSB</button>
             <button type="button" class="color-mode-tab" data-mode="wheel">色环</button>
           </div>
-          <div id="theme-color-mode-square">
+          <div id="theme-color-mode-square" class="color-mode-square">
             <canvas id="theme-color-sv" width="160" height="90"></canvas>
             <canvas id="theme-color-hue" width="160" height="14"></canvas>
           </div>
-          <canvas id="theme-color-wheel" width="160" height="160" class="hidden"></canvas>
+          <canvas id="theme-color-wheel" width="160" height="160" class="color-wheel hidden"></canvas>
           <div class="color-panel-row">
             <span id="theme-color-preview" class="color-swatch"></span>
-            <input type="text" id="theme-color-hex" maxlength="7" spellcheck="false" />
+            <input type="text" id="theme-color-hex" class="color-hex-input" maxlength="7" spellcheck="false" />
           </div>
         </div>
       </section>
@@ -164,35 +206,35 @@
       <section id="sec-motion">
         <h2>动效</h2>
 
-        <h3>写字速度</h3>
+        <h3>AI笔迹速度</h3>
         <div class="slider-row">
           <span>慢</span>
           <input type="range" id="speed" min="1" max="10" step="1" />
           <span>快</span>
         </div>
 
-        <h3 style="margin-top:18px">AI回复停留时长</h3>
+        <h3 style="margin-top:18px">AI笔迹停留时长</h3>
         <div class="slider-row">
           <span>短</span>
           <input type="range" id="lingerSeconds" min="1" max="15" step="0.5" />
           <span>长</span>
         </div>
 
-        <h3 style="margin-top:18px">AI回复淡出时长</h3>
+        <h3 style="margin-top:18px">AI笔迹淡出时长</h3>
         <div class="slider-row">
           <span>快</span>
           <input type="range" id="fadeSeconds" min="0.3" max="8" step="0.1" />
           <span>慢</span>
         </div>
 
-        <h3 style="margin-top:18px">你的笔迹停留时长</h3>
+        <h3 style="margin-top:18px">用户笔迹停留时长</h3>
         <div class="slider-row">
           <span>短</span>
           <input type="range" id="inkLingerSeconds" min="0.5" max="10" step="0.5" />
           <span>长</span>
         </div>
 
-        <h3 style="margin-top:18px">你的笔迹淡出速度</h3>
+        <h3 style="margin-top:18px">用户笔迹淡出时长</h3>
         <div class="slider-row">
           <span>快</span>
           <input type="range" id="inkFadeSeconds" min="0.3" max="6" step="0.1" />
@@ -205,10 +247,10 @@
 
         <h3>防误触</h3>
         <label class="switch-row">
-          <span>只认笔，忽略手指/手掌触摸</span>
+          <span>屏蔽手指笔画</span>
           <span class="switch"><input type="checkbox" id="penOnly" /><span class="switch-track"><span class="switch-thumb"></span></span></span>
         </label>
-        <p class="hint">用笔写字时手掌搭在屏幕上会被当成触摸，如果老是误触发多余的笔画，开这个。开了之后手指就不能画了，只有笔能写。</p>
+        <p class="hint"></p>
 
         <h3 style="margin-top:20px">发送方式</h3>
         <label class="switch-row">
@@ -220,7 +262,7 @@
           <input type="range" id="autoSendSeconds" min="0.5" max="10" step="0.5" />
           <span>慢</span>
         </div>
-        <p class="hint">关掉的话，只能靠写字界面工具栏的"✓"按钮手动提交；两者其实可以同时用。</p>
+        <p class="hint">关闭后仅能靠写字界面工具栏的"✓"按钮手动提交。</p>
       </section>
     </form>
   </div>

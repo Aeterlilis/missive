@@ -4,6 +4,8 @@
 // v2：支持多套 API 配置("配置槽位")。
 // v3：人设从单个字符串变成"提示词卡片"系统——分 ai_persona/user_persona/long_term_memory/other
 //     四类，每类下能建好几张卡片，每张能单独开关，最终发给AI的是所有开着的卡片内容拼起来。
+// v4：首屏提示语也搬进卡片系统，多加一个 hint 类别——但这类卡片不参与拼AI提示词（CARD_CATEGORIES
+//     不含它），而是每天从"开着的"卡片里随机选一条展示，见 resolveHintText。
 
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +16,10 @@ const DIR = process.env.SETTINGS_DIR || __dirname;
 const SETTINGS_PATH = path.join(DIR, 'settings.json');
 const LEGACY_ENV_PATH = path.join(__dirname, '.env');
 
-const CARD_CATEGORIES = ['ai_persona', 'user_persona', 'long_term_memory', 'other'];
+const CARD_CATEGORIES = ['ai_persona', 'user_persona', 'long_term_memory', 'other']; // 会拼进发给AI的instructions
+const HINT_CATEGORY = 'hint'; // 首屏提示语卡片，独立于上面——不拼AI提示词，每天随机选一条展示
+const ALL_CARD_CATEGORIES = [...CARD_CATEGORIES, HINT_CATEGORY]; // /api/cards 创建卡片时校验类别用这个（更全）
+const DEFAULT_HINT_TEXT = '用笔在这里写点什么…\n比如：今天发生了什么';
 
 function newProfile(overrides = {}) {
   return {
@@ -44,14 +49,21 @@ function defaultsWithProfile() {
     profiles: [p],
     activeProfileId: p.id,
     maxTokens: 280,
-    // DEFAULT_PERSONA 说的是书写环境和回应规则，不是角色扮演意义上的"人设"，归到系统提示词类别
-    promptCards: [newCard({ category: 'other', title: '环境与回应规则', content: DEFAULT_PERSONA, enabled: true })],
-    font: 'pinyon', // pinyon(花体) | medieval(哥特体) | wenkai(统一用文楷)
+    // DEFAULT_PERSONA 说的是书写环境和回应规则，不是角色扮演意义上的"人设"，归到系统提示词类别；
+    // 首屏提示语也预置一张默认卡片，跟系统提示词一个待遇，不然刚装完打开设置页"提示语列表"是空的
+    promptCards: [
+      newCard({ category: 'other', title: '环境与回应规则', content: DEFAULT_PERSONA, enabled: true }),
+      newCard({ category: HINT_CATEGORY, title: '默认提示语', content: DEFAULT_HINT_TEXT, enabled: true }),
+    ],
+    font: 'pinyon', // pinyon(花体) | medieval(哥特体) | wenkai(统一用文楷) | manufacturing(油墨印章体) | monsieur(华丽花体) | mysoul(俏皮手写体)
     speed: 6,       // 1(慢) ~ 10(快)
-    hintText: '用笔在这里写点什么…\n比如：今天发生了什么',
-    theme: 'white', // white | kraft | parchment | lined | grid | custom
+    hintText: DEFAULT_HINT_TEXT, // 旧版遗留字段：迁移到 hint 卡片后只在"一张卡片都没有"时当兜底用，见 resolveHintText
+    hintPickDate: null,   // 上次抽首屏提示语的日期（本机 YYYY-MM-DD），换了新的一天才重新抽
+    hintPickCardId: null, // 当天抽中的那张 hint 卡片 id
+    theme: 'solid', // solid(纯色，配 bgColor) | parchment | lined | grid | xuanzhi | watercolor | crumpled | black | custom
     themeColor: '#000000', // 开关/滑块这些控件的统一主题色
-    cjkFont: 'default', // default | custom —— 中文手写用默认霞鹜文楷还是自己传的字体
+    bgColor: '#ffffff', // 纸张背景选"纯色"（theme:'solid'）时用的颜色
+    cjkFont: 'default', // default(霞鹜文楷) | liujian(草书连笔) | zhimang(行书体) | notoserif(宋体) | kuaile(快乐体) | custom(自己传的字体)
     cjkFontExt: null,    // 存的自定义字体文件后缀（ttf/otf/ttc），没传过就是 null
     cjkFontName: '',     // 自定义字体的原始文件名，UI 显示用
     contextTurns: 10,     // 滚动上下文窗口大小
@@ -128,6 +140,18 @@ function migratePersonaToCards(raw) {
   return next;
 }
 
+// 兼容 v3 存量数据：promptCards 已经存在，但还没有 hint 类别的卡片——
+// 把老的单条 hintText 迁进来当第一张卡（没自定义过的话就用默认文案）
+function migrateHintToCard(raw) {
+  if (!Array.isArray(raw.promptCards)) return raw; // 还没到"有 promptCards"这一步，交给上面的迁移先跑
+  if (raw.promptCards.some((c) => c.category === HINT_CATEGORY)) return raw;
+  const next = { ...raw };
+  const hasCustomHint = typeof raw.hintText === 'string' && raw.hintText.trim() && raw.hintText !== DEFAULT_HINT_TEXT;
+  const content = hasCustomHint ? raw.hintText : DEFAULT_HINT_TEXT;
+  next.promptCards = [...raw.promptCards, newCard({ category: HINT_CATEGORY, title: '默认提示语', content, enabled: true })];
+  return next;
+}
+
 function load() {
   if (fs.existsSync(SETTINGS_PATH)) {
     try {
@@ -138,11 +162,13 @@ function load() {
       // 一旦先套上默认值里的空数组，旧的顶层字段就会被当成"已经有了"而被忽略
       let upgraded = migrateFlatToProfiles(raw);
       upgraded = migratePersonaToCards(upgraded);
+      const wasMissingHintCard = !upgraded.promptCards.some((c) => c.category === HINT_CATEGORY);
+      upgraded = migrateHintToCard(upgraded);
       const merged = { ...defaultsWithProfile(), ...upgraded };
       if (!merged.profiles.some((p) => p.id === merged.activeProfileId)) {
         merged.activeProfileId = merged.profiles[0].id;
       }
-      if (wasFlat || wasFlatPersona) save(merged); // 落盘一次，避免每次读取都重新迁移
+      if (wasFlat || wasFlatPersona || wasMissingHintCard) save(merged); // 落盘一次，避免每次读取都重新迁移
       return merged;
     } catch {
       return defaultsWithProfile();
@@ -176,6 +202,30 @@ function buildInstructions(settings) {
   return parts.join('\n\n') || DEFAULT_PERSONA;
 }
 
+function todayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 首屏提示语：从开着的 hint 卡片里每天随机选一条，同一天内保持不变（选中的卡片id存进settings，
+// 不是纯算出来的，避免同一天内每次刷新设置页都重新抽一次）。一张都没开的话退回旧版遗留的 hintText 兜底。
+function resolveHintText(settings) {
+  const enabled = settings.promptCards.filter(
+    (c) => c.category === HINT_CATEGORY && c.enabled && c.content && c.content.trim()
+  );
+  if (enabled.length === 0) return settings.hintText || DEFAULT_HINT_TEXT;
+  const today = todayLocalDate();
+  if (settings.hintPickDate === today) {
+    const kept = enabled.find((c) => c.id === settings.hintPickCardId);
+    if (kept) return kept.content;
+  }
+  const picked = enabled[Math.floor(Math.random() * enabled.length)];
+  settings.hintPickDate = today;
+  settings.hintPickCardId = picked.id;
+  save(settings);
+  return picked.content;
+}
+
 // 生成/更新"长期记忆"类下的卡片——固定只维护这一张，重复总结会覆盖上一次的内容
 function upsertLongTermMemoryCard(settings, content) {
   let card = settings.promptCards.find((c) => c.category === 'long_term_memory');
@@ -199,5 +249,7 @@ module.exports = {
   activeProfile,
   buildInstructions,
   upsertLongTermMemoryCard,
+  resolveHintText,
   CARD_CATEGORIES,
+  ALL_CARD_CATEGORIES,
 };

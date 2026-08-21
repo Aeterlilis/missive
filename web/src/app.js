@@ -594,6 +594,18 @@ const LATIN_FONT_MAP = {
   pinyon: 'Pinyon Script',
   medieval: 'MedievalSharp',
   wenkai: 'LXGW WenKai',
+  manufacturing: 'Manufacturing Consent',
+  monsieur: 'Monsieur La Doulaise',
+  mysoul: 'My Soul',
+};
+
+// 预装的中文字体，跟英文字体一样是打包进 fonts/ 的静态 @font-face，不用走上传接口
+const CJK_FONT_MAP = {
+  default: 'LXGW WenKai',
+  liujian: 'Liu Jian Mao Cao',
+  zhimang: 'Zhi Mang Xing',
+  notoserif: 'Noto Serif SC',
+  kuaile: 'ZCOOL KuaiLe',
 };
 
 const CUSTOM_CJK_FAMILY = 'MissiveCustomCJK'; // 不带空格，避免 canvas font 字符串里要不要加引号的麻烦
@@ -612,7 +624,7 @@ async function loadCjkFont(s) {
       console.warn('自定义中文字体加载失败，用默认的霞鹜文楷:', e.message);
     }
   }
-  CONFIG.CJK_FONT = 'LXGW WenKai';
+  CONFIG.CJK_FONT = CJK_FONT_MAP[s.cjkFont] || CJK_FONT_MAP.default;
 }
 
 // 拉取运行时设置（写字速度 / 英文字体 / 首屏提示 / 纸张主题），合并进 CONFIG 或直接应用到页面。
@@ -624,6 +636,10 @@ async function loadRuntimeConfig() {
     const s = await res.json();
     if (s.font) CONFIG.LATIN_FONT = LATIN_FONT_MAP[s.font] || LATIN_FONT_MAP.pinyon;
     await loadCjkFont(s);
+    // 首屏提示是中文，字体跟设置里选的中文手写字体保持一致，不再写死霞鹜文楷
+    document.documentElement.style.setProperty('--hint-font', `"${CONFIG.CJK_FONT}"`);
+    // 主题色：设置页那些控件早就在用这个变量了，写字页一直没接——笔刷预设按钮/开关这些也得跟着走
+    document.documentElement.style.setProperty('--accent', s.themeColor || '#000000');
     if (typeof s.speed === 'number') {
       const speed = Math.max(1, Math.min(10, s.speed));
       // speed 1(慢)~10(快) → 每帧间隔 30ms~6ms
@@ -653,7 +669,7 @@ async function loadRuntimeConfig() {
     }
     CONFIG.PEN_ONLY = !!s.penOnly;
     renderHint(s.hintText);
-    applyTheme(s.theme);
+    applyTheme(s.theme, s.bgColor);
   } catch (e) {
     console.warn('读取设置失败，用默认值:', e.message);
   }
@@ -672,13 +688,15 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-const THEME_CLASSES = ['theme-kraft', 'theme-parchment', 'theme-lined', 'theme-grid', 'theme-custom'];
-function applyTheme(theme) {
+const THEME_CLASSES = ['theme-parchment', 'theme-lined', 'theme-grid', 'theme-xuanzhi', 'theme-watercolor', 'theme-crumpled', 'theme-black', 'theme-custom'];
+function applyTheme(theme, bgColor) {
   document.body.classList.remove(...THEME_CLASSES);
-  document.body.style.backgroundImage = ''; // 先清掉上一个主题可能留下的内联背景图
+  document.body.style.background = ''; // 先清掉上一个主题可能留下的内联背景（自定义图片/纯色都是内联设的）
   if (theme === 'custom') {
     document.body.classList.add('theme-custom');
     document.body.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+  } else if (theme === 'solid') {
+    document.body.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
     document.body.classList.add('theme-' + theme);
   }

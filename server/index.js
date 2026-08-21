@@ -41,9 +41,10 @@ function createApp() {
       promptCards: s.promptCards,
       font: s.font,
       speed: s.speed,
-      hintText: s.hintText,
+      hintText: settingsStore.resolveHintText(s),
       theme: s.theme,
       themeColor: s.themeColor,
+      bgColor: s.bgColor,
       hasCustomBackground: fs.existsSync(BACKGROUND_PATH),
       cjkFont: s.cjkFont,
       cjkFontName: s.cjkFontName,
@@ -174,12 +175,14 @@ function createApp() {
     if (typeof body.maxTokens === 'number' && body.maxTokens > 0) next.maxTokens = Math.round(body.maxTokens);
     if (typeof body.font === 'string') next.font = body.font;
     if (typeof body.speed === 'number') next.speed = Math.max(1, Math.min(10, body.speed));
-    if (typeof body.hintText === 'string') next.hintText = body.hintText;
     if (typeof body.theme === 'string') next.theme = body.theme;
     if (typeof body.themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.themeColor)) {
       next.themeColor = body.themeColor.toLowerCase();
     }
-    if (body.cjkFont === 'default' || body.cjkFont === 'custom') next.cjkFont = body.cjkFont;
+    if (typeof body.bgColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.bgColor)) {
+      next.bgColor = body.bgColor.toLowerCase();
+    }
+    if (['default', 'liujian', 'zhimang', 'notoserif', 'kuaile', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
     if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;
     if (typeof body.autoSendSeconds === 'number' && body.autoSendSeconds > 0) {
       next.autoSendSeconds = Math.max(0.5, Math.min(20, body.autoSendSeconds));
@@ -211,7 +214,7 @@ function createApp() {
   app.post('/api/cards', (req, res) => {
     const s = settingsStore.load();
     const body = req.body || {};
-    if (!settingsStore.CARD_CATEGORIES.includes(body.category)) {
+    if (!settingsStore.ALL_CARD_CATEGORIES.includes(body.category)) {
       return res.status(400).json({ error: '未知的卡片类别' });
     }
     const card = settingsStore.newCard({

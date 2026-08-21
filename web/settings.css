@@ -145,7 +145,9 @@ label > span {
 }
 label:last-child { margin-bottom: 0; }
 
-input[type="text"],
+/* :not(.color-hex-input) 排除选色盘的十六进制输入框——那个框的样式统一由 color-picker.css 管，
+   不然这条全局规则权重比 .color-hex-input 那个 class 选择器还高，会把窄内边距/小字号盖掉 */
+input[type="text"]:not(.color-hex-input),
 input[type="password"],
 input[type="number"],
 textarea {
@@ -192,7 +194,6 @@ textarea {
 
 /* 选项做成胶囊小卡片——跟写字页笔刷预设那排按钮一个路数，不用原生单选框了 */
 .option-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.option-pills-2col { grid-template-columns: repeat(2, 1fr); }
 .option-pill {
   display: flex;
   align-items: center;
@@ -268,7 +269,7 @@ textarea {
   left: 2px;
   width: 21px;
   height: 21px;
-  background: #000;
+  background: var(--accent, #000);
   border-radius: 50%;
   transition: transform 0.15s;
 }
@@ -408,42 +409,6 @@ textarea {
 .card-delete-fab:hover { background: rgba(192, 57, 43, 0.85); }
 .card-delete-fab svg { width: 14px; height: 14px; }
 
-/* 系统提示词：不做堆叠，直接一条条平铺，右侧一个开关 */
-.card-list-flat { display: flex; flex-direction: column; gap: 10px; }
-.flat-row {
-  border: 1px solid #000;
-  border-radius: 14px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.55);
-}
-.flat-row-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.flat-row-title {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  padding: 2px 0;
-  color: #000;
-}
-.flat-row-title:read-only { pointer-events: none; }
-.flat-row.editing .flat-row-title { border-bottom: 1px solid #000; pointer-events: auto; }
-.flat-row-body { display: none; flex-direction: column; gap: 8px; margin-top: 8px; }
-.flat-row.editing .flat-row-body { display: flex; }
-.flat-row-body textarea { min-height: 80px; font-size: 13px; }
-.flat-row-delete {
-  background: none;
-  border: none;
-  color: #c0392b;
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: underline;
-  flex-shrink: 0;
-}
-
 .slider-row {
   display: flex;
   align-items: center;
@@ -453,35 +418,8 @@ textarea {
 }
 .slider-row input[type="range"] { flex: 1; }
 
-/* 主题色选色盘——跟写字页笔刷颜色那套完全同款（同一套HSV数学+canvas画法，照搬过来的） */
-.color-presets { display: flex; gap: 6px; margin-top: 8px; }
-.color-swatch {
-  width: 24px; height: 24px; border-radius: 50%; border: 1px solid #000;
-  padding: 0; cursor: pointer; opacity: 0.55;
-}
-.color-swatch:hover { opacity: 0.85; }
-.color-swatch.active { opacity: 1; outline: 2px solid #000; outline-offset: 2px; }
-.color-swatch-custom { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
-#theme-color-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-width: 200px; }
-.color-mode-tabs { display: flex; gap: 6px; }
-.color-mode-tab {
-  background: #fff; color: #000; border: 1px solid #000; border-radius: 14px;
-  padding: 3px 10px; font-size: 12px; cursor: pointer; opacity: 0.55;
-}
-.color-mode-tab:hover { opacity: 0.85; }
-.color-mode-tab.active { opacity: 1; background: var(--accent); color: #fff; }
-#theme-color-mode-square { display: flex; flex-direction: column; gap: 6px; }
-#theme-color-panel canvas {
-  width: 160px; border: 1px solid #000; border-radius: 10px; cursor: crosshair;
-  display: block; align-self: flex-start;
-}
-#theme-color-wheel { border-radius: 50%; align-self: center; }
-.color-panel-row { display: flex; align-items: center; gap: 8px; }
-.color-panel-row .color-swatch { cursor: default; opacity: 1; flex-shrink: 0; }
-#theme-color-hex {
-  flex: 1; border: 1px solid #000; border-radius: 8px; padding: 5px 8px;
-  font: 13px/1 monospace; text-transform: lowercase;
-}
+/* 主题色/纸张纯色背景的选色盘样式在 color-picker.css 里（跟写字页笔刷颜色共用一份），这里只补个页面专属间距 */
+.color-presets { margin-top: 8px; }
 
 /* 横屏：分区导航从顶部横条改成左边竖列，页面内容整体右移让出空间 */
 @media (orientation: landscape) {

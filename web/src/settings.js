@@ -66,6 +66,8 @@ async function load() {
     $('autoSendSeconds').value = data.autoSendSeconds ?? 2.8;
     $('fadeSeconds').value = data.fadeSeconds ?? 1.5;
     $('lingerSeconds').value = data.lingerSeconds ?? 7;
+    $('inkLingerSeconds').value = data.inkLingerSeconds ?? 2;
+    $('inkFadeSeconds').value = data.inkFadeSeconds ?? 0.9;
     $('penOnly').checked = !!data.penOnly;
   } catch (e) {
     setStatus('读取设置失败: ' + e.message, true);
@@ -350,6 +352,8 @@ form.addEventListener('submit', async (e) => {
         autoSendSeconds: parseFloat($('autoSendSeconds').value) || 2.8,
         fadeSeconds: parseFloat($('fadeSeconds').value) || 1.5,
         lingerSeconds: parseFloat($('lingerSeconds').value) || 7,
+        inkLingerSeconds: parseFloat($('inkLingerSeconds').value) || 2,
+        inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
         penOnly: $('penOnly').checked,
         activeProfileId: currentProfileId,
       }),

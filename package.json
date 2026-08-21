@@ -24,7 +24,8 @@
       "!server/settings.json"
     ],
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "icon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "Missive-Portable.exe"

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#ffffff" />
-  <link rel="icon" href="icon.svg" />
+  <link rel="icon" href="icon.png" />
   <title>Missive · 设置</title>
   <link rel="stylesheet" href="settings.css" />
 </head>
@@ -117,6 +117,25 @@
         <div class="slider-row">
           <span>快</span>
           <input type="range" id="fadeSeconds" min="0.3" max="8" step="0.1" />
+          <span>慢</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>你的笔迹停留时长</h2>
+        <div class="slider-row">
+          <span>短</span>
+          <input type="range" id="inkLingerSeconds" min="0.5" max="10" step="0.5" />
+          <span>长</span>
+        </div>
+        <p class="hint">你写完提交之后、开始被"饮墨"淡出之前，停在屏幕上给你看多久。</p>
+      </section>
+
+      <section>
+        <h2>你的笔迹淡出速度</h2>
+        <div class="slider-row">
+          <span>快</span>
+          <input type="range" id="inkFadeSeconds" min="0.3" max="6" step="0.1" />
           <span>慢</span>
         </div>
       </section>

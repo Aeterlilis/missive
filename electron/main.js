@@ -22,6 +22,7 @@ function createWindow(port) {
     minWidth: 480,
     minHeight: 360,
     title: 'Missive',
+    icon: path.join(__dirname, '../web/icon.png'), // build/icon.ico 只给 electron-builder 打包exe用，运行时窗口图标走这份（web/ 会被打进包里，build/ 不会）
     backgroundColor: '#ffffff',
     autoHideMenuBar: true,
     webPreferences: {

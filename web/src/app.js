@@ -303,6 +303,8 @@ class App {
   // 不用像早期版本那样纠结"按笔画拆分不好办"——反正现在整段一起当一张图处理，
   // 不需要精确拆到每一笔，手写字距不规律也不影响。有背景图的话背景图跟着一起走。
   _tickDrinking(now) {
+    // 先原样停留一段时间（跟 AI 回复的 LINGERING 对称），别一提交就立刻开始淡出
+    if (now - this.phaseStart < CONFIG.DRINK_LINGER_MS) return;
     if (!this._drinkSnapshot) {
       const bbox = this.hasBgImage ? this._bgRect : (() => {
         const raw = strokesBBox(this.turnStrokes);
@@ -622,6 +624,12 @@ async function loadRuntimeConfig() {
     }
     if (typeof s.lingerSeconds === 'number') {
       CONFIG.LINGER_BASE_MS = Math.round(s.lingerSeconds * 1000);
+    }
+    if (typeof s.inkLingerSeconds === 'number') {
+      CONFIG.DRINK_LINGER_MS = Math.round(s.inkLingerSeconds * 1000);
+    }
+    if (typeof s.inkFadeSeconds === 'number') {
+      CONFIG.DRINK_FADE_MS = Math.round(s.inkFadeSeconds * 1000);
     }
     CONFIG.PEN_ONLY = !!s.penOnly;
     renderHint(s.hintText);

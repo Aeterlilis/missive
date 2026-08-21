@@ -49,6 +49,8 @@ function createApp() {
       autoSendSeconds: s.autoSendSeconds,
       fadeSeconds: s.fadeSeconds,
       lingerSeconds: s.lingerSeconds,
+      inkLingerSeconds: s.inkLingerSeconds,
+      inkFadeSeconds: s.inkFadeSeconds,
       penOnly: s.penOnly,
       brush: s.brush,
     });
@@ -121,6 +123,12 @@ function createApp() {
     }
     if (typeof body.lingerSeconds === 'number' && body.lingerSeconds > 0) {
       next.lingerSeconds = Math.max(1, Math.min(15, body.lingerSeconds));
+    }
+    if (typeof body.inkLingerSeconds === 'number' && body.inkLingerSeconds > 0) {
+      next.inkLingerSeconds = Math.max(0.5, Math.min(10, body.inkLingerSeconds));
+    }
+    if (typeof body.inkFadeSeconds === 'number' && body.inkFadeSeconds > 0) {
+      next.inkFadeSeconds = Math.max(0.3, Math.min(6, body.inkFadeSeconds));
     }
     if (typeof body.penOnly === 'boolean') next.penOnly = body.penOnly;
     if (body.brush && typeof body.brush === 'object') {

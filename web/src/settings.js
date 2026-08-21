@@ -199,14 +199,21 @@ function refreshBoxBorderColor() {
   const root = document.documentElement.style;
   if (glassMode === 'enhanced') {
     const [ir, ig, ib] = hexToRgbTriplet(chromeInkHex);
-    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.2)`);
+    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.1)`);
   } else {
     root.setProperty('--box-border-color', 'var(--ink)');
   }
 }
 
+// PS 那套"斜面浮雕+内阴影+内发光+叠光泽+投影"图层样式的 CSS 翻译，几层 box-shadow 叠起来：
+// 外层投影负责浮起来的感觉；两道极窄的内嵌高光/暗角是斜面的硬边转折（贴着轮廓，不模糊）；
+// 内发光是不分方向、整圈都有的一层亮，对应"整个轮廓都透光，背光面也会反光"；内阴影用更大的
+// 模糊半径往里推，让暗部落在偏中间的位置而不是死贴着边——这样才不会看起来像一整块实心凸起的
+// 塑料，而是有光线穿过的曲面。
+const GLASS_RIM = '0 3px 12px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)';
+
 // 玻璃强度："标准"就是 chrome-theme.css 里定义的默认值；"更透亮"把模糊调轻、饱和度调高，
-// 边框变淡、加一圈外阴影+内高光/暗角（--box-rim）表达轮廓，支持的话再叠一层真正的折射扭曲，
+// 边框淡到几乎看不见、换 GLASS_RIM 那一叠阴影/高光表达轮廓，支持的话再叠一层真正的折射扭曲，
 // 几样加起来才是用户说的"不是随便糊了个模糊"的液态玻璃感。
 function applyGlassIntensity(mode) {
   glassMode = mode;
@@ -214,7 +221,7 @@ function applyGlassIntensity(mode) {
   if (mode === 'enhanced') {
     const distortion = GLASS_DISTORTION_SUPPORTED ? 'url(#glass-distortion) ' : '';
     root.setProperty('--box-blur', `${distortion}blur(6px) saturate(2)`);
-    root.setProperty('--box-rim', '0 8px 24px rgba(0,0,0,.1), inset 0 1.5px 1.5px rgba(255,255,255,.65), inset 0 -1.5px 1.5px rgba(0,0,0,.18)');
+    root.setProperty('--box-rim', GLASS_RIM);
     tuneDistortionScale();
   } else {
     root.setProperty('--box-blur', 'blur(16px) saturate(1.6)');

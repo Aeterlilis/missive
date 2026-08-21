@@ -37,8 +37,8 @@ function applyChromeTheme(s) {
     let supportsDistortion = false;
     try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
     root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(2)`);
-    root.setProperty('--box-rim', '0 8px 24px rgba(0,0,0,.1), inset 0 1.5px 1.5px rgba(255,255,255,.65), inset 0 -1.5px 1.5px rgba(0,0,0,.18)');
-    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.2)`);
+    root.setProperty('--box-rim', '0 3px 12px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)');
+    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.1)`);
     const dispMap = document.querySelector('#glass-distortion feDisplacementMap');
     if (dispMap) dispMap.setAttribute('scale', window.matchMedia('(pointer: coarse)').matches ? '35' : '14');
   }

@@ -15,7 +15,7 @@
   /* 设置/历史页整页那层半透明遮罩（body::before）用这个，颜色跟 --box-bg 一样是底色，
      但透明度固定（不跟着底色透明度滑块联动）——遮罩和卡片/按钮是两件事，用户不想调一个
      底色透明度就连遮罩浓淡也跟着变，见 settings.js 的 applyChromeTheme。 */
-  --veil-bg: rgba(255, 255, 255, 0.25);
+  --veil-bg: rgba(255, 255, 255, 0.12);
   /* 毛玻璃：模糊+提高饱和度，垫在半透明底色下面的纸张纹理透出来的时候不再是纯色块，
      而是糊成一片有质感的背景色——苹果那套"液态玻璃"的核心就是这个。写字页/设置页/
      历史页三处的 var(--box-bg) 都配了这个（普通手机/平板/电脑屏幕，不是墨水屏，不用
@@ -31,4 +31,7 @@
      用户自己在设置页调（见 applyBorderColor），这里就是原样等于 --border-color，留这层间接
      只是为了以后如果还要给玻璃元素单独覆盖边框颜色，不用再去改 17 处 CSS。 */
   --box-border-color: var(--border-color);
+  /* 贴在主题色(--accent)底上的文字/图标该用黑还是白，根据主题色本身明暗算出来的，见 settings.js
+     的 pickContrastColor/applyThemeColor——主题色能自定义成浅色，写死白字会看不清。 */
+  --accent-contrast: #ffffff;
 }

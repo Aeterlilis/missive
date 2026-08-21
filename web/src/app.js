@@ -638,8 +638,18 @@ async function loadRuntimeConfig() {
     await loadCjkFont(s);
     // 首屏提示是中文，字体跟设置里选的中文手写字体保持一致，不再写死霞鹜文楷
     document.documentElement.style.setProperty('--hint-font', `"${CONFIG.CJK_FONT}"`);
-    // 主题色：设置页那些控件早就在用这个变量了，写字页一直没接——笔刷预设按钮/开关这些也得跟着走
-    document.documentElement.style.setProperty('--accent', s.themeColor || '#000000');
+    // 主题色：设置页那些控件早就在用这个变量了，写字页一直没接——笔刷预设按钮/开关这些也得跟着走。
+    // --accent-contrast 是贴在主题色底上的文字/图标该用黑还是白，根据主题色本身明暗算，逻辑
+    // 跟设置页 pickContrastColor 一样（主题色可以自定义成浅色，写死白字会看不清）。
+    {
+      const accentHex = s.themeColor || '#000000';
+      const root = document.documentElement.style;
+      root.setProperty('--accent', accentHex);
+      const n = parseInt(accentHex.slice(1), 16);
+      const [ar, ag, ab] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+      const brightness = (ar * 299 + ag * 587 + ab * 114) / 1000;
+      root.setProperty('--accent-contrast', brightness > 128 ? '#000000' : '#ffffff');
+    }
     // 界面配色（日夜主题）：工具栏/笔刷面板这些框框的底色+文字颜色+边框颜色，
     // 逻辑跟设置页 applyChromeTheme/applyBorderColor 一样——文字和边框故意拆成两个独立颜色。
     const hexToRgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };

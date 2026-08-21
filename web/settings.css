@@ -252,7 +252,7 @@ textarea {
   min-height: 40px;
 }
 .option-pill:hover { opacity: 0.8; }
-.option-pill.active { opacity: 1; background: var(--accent); color: #fff; }
+.option-pill.active { opacity: 1; background: var(--accent); color: var(--accent-contrast); }
 
 .option-pill-custom {
   background-size: cover;
@@ -428,7 +428,7 @@ textarea {
   cursor: pointer;
   padding: 0;
 }
-.check-radio svg { width: 14px; height: 14px; color: #fff; opacity: 0; }
+.check-radio svg { width: 14px; height: 14px; color: var(--accent-contrast); opacity: 0; }
 .check-radio.selected { background: var(--accent); }
 .check-radio.selected svg { opacity: 1; }
 

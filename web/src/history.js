@@ -35,7 +35,7 @@ function applyChromeTheme(s) {
   root.setProperty('--ink', ink);
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
-  root.setProperty('--veil-bg', `rgba(${br}, ${bg}, ${bb}, 0.25)`); // 整页遮罩透明度固定，跟底色透明度滑块脱钩
+  root.setProperty('--veil-bg', `rgba(${br}, ${bg}, ${bb}, 0.12)`); // 整页遮罩透明度固定，跟底色透明度滑块脱钩
   root.setProperty('--box-solid', boxHex);
   root.setProperty('--border-color', `rgba(${bdr}, ${bdg}, ${bdb}, ${borderAlpha})`);
   // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+外阴影+边缘高光/暗角，逻辑跟设置页

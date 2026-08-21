@@ -144,9 +144,20 @@ function setupCjkFontPills() {
   return { setActive, getActive };
 }
 
+// 选中态的胶囊/开关圆点这些贴在主题色底上的文字/图标，得根据主题色本身的明暗自动选黑或白，
+// 不能写死一个颜色——主题色预设大多是深色所以以前写死白字看着没事，但主题色是能自定义的，
+// 选到浅色的话写死白字就看不清了。YIQ 感知亮度公式，阈值128是常见取法。
+function pickContrastColor(hex) {
+  const [r, g, b] = hexToRgbTriplet(hex);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 128 ? '#000000' : '#ffffff';
+}
+
 function applyThemeColor(hex) {
   themeColorHex = hex;
-  document.documentElement.style.setProperty('--accent', hex);
+  const root = document.documentElement.style;
+  root.setProperty('--accent', hex);
+  root.setProperty('--accent-contrast', pickContrastColor(hex));
 }
 
 const CHROME_PRESETS = {
@@ -159,7 +170,8 @@ function hexToRgbTriplet(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-const VEIL_ALPHA = 0.25; // 整页遮罩(body::before)的透明度，故意跟底色透明度滑块脱钩，固定这一个值
+const VEIL_ALPHA = 0.12; // 整页遮罩(body::before)的透明度，故意跟底色透明度滑块脱钩，固定这一个值——
+                          // 明显要比header/导航栏（默认0.55）更透，不然看不出来是垫在最底下的一层
 
 // 界面配色：所有"框框"共用的底色（颜色+透明度）和文字颜色。
 // --box-solid/--ink-faint 是从这两个值派生出来的，给缩略图底板、按钮悬浮反色、细分隔线这些

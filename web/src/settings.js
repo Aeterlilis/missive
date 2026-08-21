@@ -154,6 +154,8 @@ function hexToRgbTriplet(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+let glassMode = 'standard'; // 'standard' | 'enhanced' —— applyChromeTheme 改 ink 的时候要知道当前是哪档，才能同步更新边框颜色
+
 // 界面配色：所有"框框"共用的底色（颜色+透明度）和文字/边框色。
 // --box-solid/--ink-faint 是从这两个值派生出来的，给缩略图底板、按钮悬浮反色、细分隔线这些
 // 必须用不透明色/极淡色的地方用，见 chrome-theme.css 顶部注释。
@@ -168,6 +170,7 @@ function applyChromeTheme(ink, boxHex, alpha) {
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--box-solid', boxHex);
+  refreshBoxBorderColor();
 }
 
 function syncChromeCustomVisibility(mode) {
@@ -181,19 +184,43 @@ const GLASS_DISTORTION_SUPPORTED = (() => {
   try { return CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch { return false; }
 })();
 
+// 折射扭曲的强度在鼠标驱动的桌面端和触屏端渲染出来的观感差很多（同一个 scale 桌面端会糊成
+// 波浪，触屏端却刚刚好）——用 pointer:coarse 粗略分个类，桌面（细指针/鼠标）给一个弱得多的值。
+function tuneDistortionScale() {
+  const map = document.querySelector('#glass-distortion feDisplacementMap');
+  if (!map) return;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  map.setAttribute('scale', coarse ? '35' : '14');
+}
+
+// "更透亮"档的边框不再靠实线撑轮廓，改成 ink 的极淡版（跟 --ink-faint 一个思路，但透明度更低），
+// 让 --box-rim 的内阴影高光/暗角去表达边缘。ink 颜色变了、或者玻璃档位切换了，都要重新算一遍。
+function refreshBoxBorderColor() {
+  const root = document.documentElement.style;
+  if (glassMode === 'enhanced') {
+    const [ir, ig, ib] = hexToRgbTriplet(chromeInkHex);
+    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.2)`);
+  } else {
+    root.setProperty('--box-border-color', 'var(--ink)');
+  }
+}
+
 // 玻璃强度："标准"就是 chrome-theme.css 里定义的默认值；"更透亮"把模糊调轻、饱和度调高，
-// 加一圈边缘高光/暗角（--box-rim），支持的话再叠一层真正的折射扭曲，三样加起来才是
-// 用户说的"不是随便糊了个模糊"的液态玻璃感。
+// 边框变淡、加一圈外阴影+内高光/暗角（--box-rim）表达轮廓，支持的话再叠一层真正的折射扭曲，
+// 几样加起来才是用户说的"不是随便糊了个模糊"的液态玻璃感。
 function applyGlassIntensity(mode) {
+  glassMode = mode;
   const root = document.documentElement.style;
   if (mode === 'enhanced') {
     const distortion = GLASS_DISTORTION_SUPPORTED ? 'url(#glass-distortion) ' : '';
     root.setProperty('--box-blur', `${distortion}blur(6px) saturate(2)`);
-    root.setProperty('--box-rim', 'inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 1px rgba(0,0,0,.12)');
+    root.setProperty('--box-rim', '0 8px 24px rgba(0,0,0,.1), inset 0 1.5px 1.5px rgba(255,255,255,.65), inset 0 -1.5px 1.5px rgba(0,0,0,.18)');
+    tuneDistortionScale();
   } else {
     root.setProperty('--box-blur', 'blur(16px) saturate(1.6)');
     root.setProperty('--box-rim', 'none');
   }
+  refreshBoxBorderColor();
 }
 
 // 通用 HSB方形/色环 选色盘——主题色跟纸张纯色背景共用同一份实现，靠 ids/presetsSelector 挂到不同的 DOM 上。

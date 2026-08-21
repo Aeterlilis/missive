@@ -30,12 +30,17 @@ function applyChromeTheme(s) {
   root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--box-solid', boxHex);
-  // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+边缘高光，逻辑跟设置页 applyGlassIntensity 一样
+  // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+外阴影+边缘高光/暗角+淡边框，逻辑跟设置页
+  // applyGlassIntensity 一样。折射扭曲强度桌面鼠标端和触屏端观感差很多，用 pointer:coarse
+  // 粗分一下，给桌面端弱得多的 scale，不然桌面上会糊成波浪。
   if (s.glassIntensity === 'enhanced') {
     let supportsDistortion = false;
     try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
     root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(2)`);
-    root.setProperty('--box-rim', 'inset 0 1px 1px rgba(255,255,255,.55), inset 0 -1px 1px rgba(0,0,0,.12)');
+    root.setProperty('--box-rim', '0 8px 24px rgba(0,0,0,.1), inset 0 1.5px 1.5px rgba(255,255,255,.65), inset 0 -1.5px 1.5px rgba(0,0,0,.18)');
+    root.setProperty('--box-border-color', `rgba(${ir}, ${ig}, ${ib}, 0.2)`);
+    const dispMap = document.querySelector('#glass-distortion feDisplacementMap');
+    if (dispMap) dispMap.setAttribute('scale', window.matchMedia('(pointer: coarse)').matches ? '35' : '14');
   }
 }
 fetch('/api/settings').then((r) => r.json()).then((s) => { applyTheme(s.theme, s.bgColor); applyChromeTheme(s); }).catch(() => {});

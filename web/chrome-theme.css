@@ -19,4 +19,8 @@
      具体逻辑和"支持就用，不支持就退回普通模糊"的判断在 settings.js 的 applyGlassIntensity。 */
   --box-blur: blur(16px) saturate(1.6);
   --box-rim: none;
+  /* "更透亮"档专用：边缘不再靠 border 那条实线撑轮廓，而是把 border 的颜色本身也调淡
+     （--box-border-color），改由 --box-rim 的内阴影高光/暗角 + 外层浮起的软阴影来表达轮廓——
+     这样才有玻璃感，实线描边太"死"，标准档还是走 --ink 那条实线。 */
+  --box-border-color: var(--ink);
 }

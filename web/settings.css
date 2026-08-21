@@ -28,6 +28,7 @@ body::before {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
   z-index: 0;
   pointer-events: none;
 }
@@ -45,6 +46,7 @@ html { scroll-behavior: smooth; }
   box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
+  border-color: var(--box-border-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -72,6 +74,7 @@ header {
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   border-bottom: 1px solid var(--ink);
+  border-color: var(--box-border-color);
 }
 h1 { font-size: 18px; font-weight: 600; flex: 1; }
 
@@ -89,6 +92,7 @@ h1 { font-size: 18px; font-weight: 600; flex: 1; }
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   border-bottom: 1px solid var(--ink);
+  border-color: var(--box-border-color);
   touch-action: manipulation;
 }
 #settings-nav a {
@@ -173,6 +177,7 @@ textarea {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
   color: var(--ink);
 }
 
@@ -189,6 +194,7 @@ textarea {
   box-shadow: var(--box-rim);
   color: var(--ink);
   border: 1px solid var(--ink);
+  border-color: var(--box-border-color);
   border-radius: 999px;
   padding: 8px 18px;
   font-size: 13px;
@@ -227,6 +233,7 @@ textarea {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
   color: var(--ink);
   min-height: 40px;
 }
@@ -284,6 +291,7 @@ textarea {
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
   border: 1px solid var(--ink);
+  border-color: var(--box-border-color);
   border-radius: 999px;
   transition: background 0.15s;
 }
@@ -319,6 +327,7 @@ textarea {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
   opacity: 0.6;
   cursor: pointer;
   display: flex;
@@ -346,6 +355,7 @@ textarea {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
 }
 .card-stack.collapsed.has-more::before { transform: translateY(9px) scale(0.96); z-index: 0; }
 .card-stack.collapsed.has-more::after { transform: translateY(18px) scale(0.92); z-index: -1; }
@@ -365,6 +375,7 @@ textarea {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
 }
 .card-head {
   display: flex;
@@ -397,6 +408,7 @@ textarea {
   backdrop-filter: var(--box-blur);
   -webkit-backdrop-filter: var(--box-blur);
   box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
   display: flex;
   align-items: center;
   justify-content: center;

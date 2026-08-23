@@ -90,10 +90,17 @@
           AI 回复时会参考最近几轮写过的内容，当前记忆 <b id="contextCount">-</b> 轮（最多 <span id="contextMax">10</span> 轮）。
         </p>
         <label class="switch-row">
-          <span>重置前先让 AI 总结这段对话，存成"长期记忆"卡片</span>
-          <span class="switch"><input type="checkbox" id="summarizeOnReset" checked /><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          <span>重置对话前询问是否总结</span>
+          <span class="switch"><input type="checkbox" id="confirmOnReset" checked /><span class="switch-track"><span class="switch-thumb"></span></span></span>
         </label>
+        <p class="hint">开启后，每次点重置都会问要不要先让 AI 把这段对话总结成一张"长期记忆"卡片。关闭则直接重置，不总结。</p>
         <button type="button" id="resetContext" class="secondary" style="margin-top:14px">重置对话（开启新的上下文）</button>
+        <!-- 询问开着时点上面那颗按钮，就地展开这一行让人选，不另外弹窗 -->
+        <div id="resetChoice" class="hidden" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px">
+          <button type="button" id="resetCancel" class="secondary">取消</button>
+          <button type="button" id="resetPlain" class="secondary">直接重置</button>
+          <button type="button" id="resetSummarize" class="secondary">总结后重置</button>
+        </div>
 
         <div class="card-group" data-group="long_term_memory" style="margin-top:24px">
           <div class="card-group-head">

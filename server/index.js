@@ -69,7 +69,7 @@ function createApp() {
       replyAlign: s.replyAlign,
       toolbarPosition: s.toolbarPosition,
       confirmClearAll: s.confirmClearAll,
-      summarizeOnReset: s.summarizeOnReset,
+      confirmOnReset: s.confirmOnReset,
       brush: s.brush,
     });
   });
@@ -236,7 +236,7 @@ function createApp() {
     if (['left', 'center', 'right'].includes(body.replyAlign)) next.replyAlign = body.replyAlign;
     if (['left', 'bottom'].includes(body.toolbarPosition)) next.toolbarPosition = body.toolbarPosition;
     if (typeof body.confirmClearAll === 'boolean') next.confirmClearAll = body.confirmClearAll;
-    if (typeof body.summarizeOnReset === 'boolean') next.summarizeOnReset = body.summarizeOnReset;
+    if (typeof body.confirmOnReset === 'boolean') next.confirmOnReset = body.confirmOnReset;
     if (body.brush && typeof body.brush === 'object') {
       next.brush = { ...s.brush, ...body.brush };
     }

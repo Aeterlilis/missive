@@ -84,7 +84,8 @@ function defaultsWithProfile() {
     replyFontScale: 1,       // 回复字号的缩放系数，1=按屏宽自适应算出来的原始大小（见 web/src/config.js 的 layout）
     toolbarPosition: 'left', // 写字页工具栏摆哪：left(左上竖排，绘画软件那种) | bottom(底部居中，够得着拇指)
     confirmClearAll: true,   // 一键清空笔迹前弹一下确认。默认开——清空不可逆，误触一次就全没了
-    summarizeOnReset: true,  // 重置对话时先把这轮总结成一张长期记忆卡片，写字页和设置页的重置按钮共用这个
+    confirmOnReset: true,    // 点重置对话时弹框问要不要先总结成长期记忆。关掉就直接重置、不总结——
+                             // 总结要花一次 API 调用还得等，不该在没问过的情况下发生
     brush: {
       preset: 'pen',      // pen | ballpoint | marker | brush
       size: 7,

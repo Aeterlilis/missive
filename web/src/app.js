@@ -774,7 +774,7 @@ async function loadRuntimeConfig() {
     if (typeof s.replyFontScale === 'number') CONFIG.REPLY_FONT_SCALE = s.replyFontScale;
     if (['left', 'center', 'right'].includes(s.replyAlign)) CONFIG.REPLY_ALIGN = s.replyAlign;
     CONFIG.CONFIRM_CLEAR_ALL = s.confirmClearAll !== false;
-    CONFIG.SUMMARIZE_ON_RESET = s.summarizeOnReset !== false;
+    CONFIG.CONFIRM_ON_RESET = s.confirmOnReset !== false;
     if (typeof s.speed === 'number') {
       const speed = Math.max(1, Math.min(10, s.speed));
       // speed 1(慢)~10(快) → 每帧间隔 30ms~6ms
@@ -870,40 +870,89 @@ function bindToolbar(app) {
   $('btn-undo').addEventListener('click', () => app.undoLastStroke());
   $('btn-send').addEventListener('click', () => app.submitNow());
 
-  // ─── 一键清空：默认先弹确认，设置里可以关掉 ──────────
-  const confirmClear = $('confirm-clear');
-  const btnClearAll = $('btn-clear-all');
-  const closeConfirm = () => confirmClear.classList.add('hidden');
-  btnClearAll.addEventListener('click', () => {
-    if (app.state !== S.LISTENING || app.ink.isEmpty()) return; // 空页面点了也是白点
-    if (CONFIG.CONFIRM_CLEAR_ALL === false) {
-      app.clearAllStrokes();
-      return;
+  // ─── 通用确认框：清空笔迹、重置对话共用 ────────────────
+  // 弹一个问题加几个按钮，返回被点中那个按钮的 value；点框外面或"取消"返回 null。
+  const confirmBox = $('confirm-box');
+  const confirmText = $('confirm-text');
+  const confirmActions = $('confirm-actions');
+  let confirmResolve = null;
+
+  const closeConfirm = (value) => {
+    confirmBox.classList.add('hidden');
+    const resolve = confirmResolve;
+    confirmResolve = null;
+    resolve?.(value ?? null);
+  };
+
+  function showConfirm({ text, actions, anchor = 'at-toolbar', trigger }) {
+    closeConfirm(null); // 上一个还开着的话先收掉，别把 promise 挂住
+    confirmText.textContent = text;
+    confirmActions.innerHTML = '';
+    for (const a of actions) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = a.label;
+      if (a.primary) btn.className = 'primary';
+      btn.addEventListener('click', () => closeConfirm(a.value));
+      confirmActions.appendChild(btn);
     }
-    confirmClear.classList.remove('hidden');
-  });
-  $('confirm-clear-cancel').addEventListener('click', closeConfirm);
-  $('confirm-clear-ok').addEventListener('click', () => {
-    closeConfirm();
-    app.clearAllStrokes();
-  });
-  // 点确认框以外的任何地方都算取消，跟笔刷面板一个脾气
+    confirmBox.classList.remove('hidden', 'at-toolbar', 'at-topright');
+    confirmBox.classList.add(anchor);
+    confirmBox._trigger = trigger || null;
+    return new Promise((resolve) => { confirmResolve = resolve; });
+  }
+
+  // 点框以外的任何地方都算取消，跟笔刷面板一个脾气
   document.addEventListener('pointerdown', (e) => {
-    if (confirmClear.classList.contains('hidden')) return;
-    if (confirmClear.contains(e.target) || btnClearAll.contains(e.target)) return;
-    closeConfirm();
+    if (confirmBox.classList.contains('hidden')) return;
+    if (confirmBox.contains(e.target)) return;
+    if (confirmBox._trigger && confirmBox._trigger.contains(e.target)) return;
+    closeConfirm(null);
+  });
+
+  // ─── 一键清空：默认先弹确认，设置里可以关掉 ──────────
+  const btnClearAll = $('btn-clear-all');
+  btnClearAll.addEventListener('click', async () => {
+    if (app.state !== S.LISTENING || app.ink.isEmpty()) return; // 空页面点了也是白点
+    if (CONFIG.CONFIRM_CLEAR_ALL !== false) {
+      const choice = await showConfirm({
+        text: '清空这一页写的所有内容？',
+        actions: [{ label: '取消', value: null }, { label: '清空', value: 'ok', primary: true }],
+        trigger: btnClearAll,
+      });
+      if (choice !== 'ok') return;
+    }
+    app.clearAllStrokes();
   });
 
   // ─── 重置对话：跟设置页那颗按钮同一个接口 ─────────────
-  // 要不要先总结成长期记忆读设置里的开关（设置页那个复选框现在也存进设置了）。
+  // 要不要先总结成长期记忆是每次弹框现问的，不是记在设置里的固定值——同一个人
+  // 不同时候的需求不一样。设置里那个开关只管弹不弹这个框；关掉就直接重置、不总结
+  // （总结要花一次 API 调用还得等，不该在没问过的情况下发生）。
   const btnResetContext = $('btn-reset-context');
   btnResetContext.addEventListener('click', async () => {
+    let summarize = false;
+    if (CONFIG.CONFIRM_ON_RESET !== false) {
+      const choice = await showConfirm({
+        text: '重置对话之后，之前写的内容不再作为上下文。要先让 AI 把这段总结成一张长期记忆卡片吗？',
+        actions: [
+          { label: '取消', value: null },
+          { label: '直接重置', value: 'plain' },
+          { label: '总结后重置', value: 'summarize', primary: true },
+        ],
+        anchor: 'at-topright',
+        trigger: btnResetContext,
+      });
+      if (!choice) return;
+      summarize = choice === 'summarize';
+    }
     btnResetContext.disabled = true;
+    if (summarize) toast('正在总结这段对话…');
     try {
       const res = await fetch('/api/context/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summarize: CONFIG.SUMMARIZE_ON_RESET !== false }),
+        body: JSON.stringify({ summarize }),
       });
       const out = await res.json();
       if (!res.ok) throw new Error(out.error || '重置失败');

@@ -972,7 +972,7 @@ async function load() {
     setRangeValue('inkFadeSeconds', data.inkFadeSeconds ?? 0.9);
     $('penOnly').checked = !!data.penOnly;
     $('confirmClearAll').checked = data.confirmClearAll !== false;
-    $('summarizeOnReset').checked = data.summarizeOnReset !== false;
+    $('confirmOnReset').checked = data.confirmOnReset !== false;
   } catch (e) {
     setStatus('读取设置失败: ' + e.message, true);
   }
@@ -1026,8 +1026,21 @@ function resizeImageToDataUrl(file, maxSide, quality) {
   });
 }
 
-$('resetContext').addEventListener('click', async () => {
-  const summarize = $('summarizeOnReset').checked;
+// 询问开着的话，点"重置对话"先就地展开三个选项让人选；关掉就直接重置、不总结
+// （总结要花一次 API 调用还得等，不该在没问过的情况下发生）。写字页那颗重置按钮
+// 是同一套逻辑，只是那边用的是玻璃确认框，见 app.js 的 showConfirm。
+$('resetContext').addEventListener('click', () => {
+  if ($('confirmOnReset').checked) {
+    $('resetChoice').classList.remove('hidden');
+    return;
+  }
+  doResetContext(false);
+});
+$('resetCancel').addEventListener('click', () => $('resetChoice').classList.add('hidden'));
+$('resetPlain').addEventListener('click', () => { $('resetChoice').classList.add('hidden'); doResetContext(false); });
+$('resetSummarize').addEventListener('click', () => { $('resetChoice').classList.add('hidden'); doResetContext(true); });
+
+async function doResetContext(summarize) {
   const btn = $('resetContext');
   btn.disabled = true;
   setStatus(summarize ? '正在总结…' : '重置中…');
@@ -1052,7 +1065,7 @@ $('resetContext').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
   }
-});
+}
 
 async function saveAll() {
   try {
@@ -1120,7 +1133,7 @@ async function saveAll() {
         replyAlign: alignPills.getActive() || 'center',
         toolbarPosition: toolbarPills.getActive() || 'left',
         confirmClearAll: $('confirmClearAll').checked,
-        summarizeOnReset: $('summarizeOnReset').checked,
+        confirmOnReset: $('confirmOnReset').checked,
         activeProfileId: currentProfileId,
       }),
     });

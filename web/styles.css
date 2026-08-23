@@ -189,15 +189,20 @@ body.toolbar-bottom #toolbar > * { pointer-events: auto; }
 /* 弹出面板贴着工具栏：左上竖列的从右侧出来，底部横排的从上方出来（居中）。
    笔刷面板和清空确认共用同一套定位。 */
 body.toolbar-left #brush-panel,
-body.toolbar-left #confirm-clear {
+body.toolbar-left #confirm-box.at-toolbar {
   top: 14px;
   left: 66px;
 }
 body.toolbar-bottom #brush-panel,
-body.toolbar-bottom #confirm-clear {
+body.toolbar-bottom #confirm-box.at-toolbar {
   bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
+}
+/* 贴右上角那组入口（重置对话/历史/设置）下方 */
+#confirm-box.at-topright {
+  top: 66px;
+  right: 16px;
 }
 
 /* 短提示：重置对话这类操作画面上看不出变化，用它回执一句话再自己淡掉。
@@ -225,8 +230,8 @@ body.toolbar-bottom #confirm-clear {
 }
 #toast.fade { opacity: 0; }
 
-/* 清空确认：一句话加两个按钮，样式跟笔刷面板同源 */
-#confirm-clear {
+/* 通用确认框：一句话加几个按钮，样式跟笔刷面板同源 */
+#confirm-box {
   position: fixed;
   z-index: 7;
   background: var(--box-bg);
@@ -244,7 +249,7 @@ body.toolbar-bottom #confirm-clear {
   font-size: 14px;
   max-width: 260px;
 }
-.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .confirm-actions button {
   font: inherit;
   font-size: 13px;
@@ -259,7 +264,7 @@ body.toolbar-bottom #confirm-clear {
 }
 .confirm-actions button:hover { opacity: 1; }
 /* 真正执行的那个用主题色实心，跟"取消"拉开差别，免得手快点错 */
-#confirm-clear-ok {
+.confirm-actions button.primary {
   background: var(--accent, #000);
   color: var(--accent-contrast, #fff);
   border-color: transparent;

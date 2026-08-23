@@ -87,14 +87,12 @@
     </div>
   </div>
 
-  <!-- 清空确认：跟笔刷面板同一套贴着工具栏的定位（见 styles.css），点面板以外
-       任何地方都算取消。设置里关掉"清空前确认"的话根本不会弹，见 app.js。 -->
-  <div id="confirm-clear" class="hidden">
-    <p id="confirm-clear-text">清空这一页写的所有内容？</p>
-    <div class="confirm-actions">
-      <button type="button" id="confirm-clear-cancel">取消</button>
-      <button type="button" id="confirm-clear-ok">清空</button>
-    </div>
+  <!-- 通用确认框：清空笔迹、重置对话都用它，问题和按钮由 app.js 的 showConfirm 填。
+       贴着触发它的那个按钮弹出（at-toolbar 贴工具栏、at-topright 贴右上角那组，
+       见 styles.css），点框以外任何地方都算取消。 -->
+  <div id="confirm-box" class="hidden">
+    <p id="confirm-text"></p>
+    <div class="confirm-actions" id="confirm-actions"></div>
   </div>
 
   <!-- 行内打字框：就摆在正文将来浮现的那块位置上，点确定之后这段字会在原地
@@ -194,6 +192,6 @@
   </style>
 
   <!-- 模块以 ESM 加载，app.js 是主入口。?v= 强制刷新缓存 -->
-  <script type="module" src="src/app.js?v=18"></script>
+  <script type="module" src="src/app.js?v=20"></script>
 </body>
 </html>

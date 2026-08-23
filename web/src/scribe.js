@@ -102,9 +102,13 @@ export class Scribe {
     thin(mask, W, H);                      // Zhang-Suen 细化
     const strokes = trace(mask, W, H);     // [ [{x,y}], ... ] 有序折线
 
-    // 行在可见画布上的水平居中位置
+    // 行在可见画布上的水平位置。对齐方式是设置项（见 CONFIG.REPLY_ALIGN）：
+    // 左/右对齐都贴着正文留白 marginX，跟打字框的边界是同一条线；居中是老行为。
     const canvasW = this.ctx.canvas.width;
-    const xOff = Math.round((canvasW - W) / 2);
+    const align = CONFIG.REPLY_ALIGN;
+    const xOff = align === 'left' ? L.marginX
+      : align === 'right' ? canvasW - L.marginX - W
+      : Math.round((canvasW - W) / 2);
 
     // 把这一行的折线（相对行画布的坐标）平移到可见画布坐标，加入待写序列
     for (const s of strokes) {

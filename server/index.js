@@ -66,6 +66,7 @@ function createApp() {
       inkFadeSeconds: s.inkFadeSeconds,
       penOnly: s.penOnly,
       replyFontScale: s.replyFontScale,
+      replyAlign: s.replyAlign,
       toolbarPosition: s.toolbarPosition,
       confirmClearAll: s.confirmClearAll,
       summarizeOnReset: s.summarizeOnReset,
@@ -232,6 +233,7 @@ function createApp() {
     if (typeof body.replyFontScale === 'number' && body.replyFontScale > 0) {
       next.replyFontScale = Math.max(0.5, Math.min(1.5, body.replyFontScale));
     }
+    if (['left', 'center', 'right'].includes(body.replyAlign)) next.replyAlign = body.replyAlign;
     if (['left', 'bottom'].includes(body.toolbarPosition)) next.toolbarPosition = body.toolbarPosition;
     if (typeof body.confirmClearAll === 'boolean') next.confirmClearAll = body.confirmClearAll;
     if (typeof body.summarizeOnReset === 'boolean') next.summarizeOnReset = body.summarizeOnReset;

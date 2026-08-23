@@ -325,6 +325,9 @@ body.toolbar-bottom #confirm-clear {
   border-color: var(--box-border-color);
   background: transparent;
   resize: none;
+  /* 高度由 autoGrowInput 跟着内容撑，永远不需要滚动——不关掉的话 border-box 下
+     算出来的高度差那么一两像素，右边就会冒出一条滚动条 */
+  overflow: hidden;
   /* 字号/行高/字体由 app.js 的 syncTypeBoxFont 按 CONFIG.layout 算出来内联覆盖，
      跟浮现在纸上的字对齐。这里只是它还没跑起来时的兜底。 */
   font-size: 26px;

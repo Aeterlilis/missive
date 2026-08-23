@@ -772,6 +772,7 @@ async function loadRuntimeConfig() {
     applyGlassIntensity(s.glassIntensity);
     applyToolbarPosition(s.toolbarPosition);
     if (typeof s.replyFontScale === 'number') CONFIG.REPLY_FONT_SCALE = s.replyFontScale;
+    if (['left', 'center', 'right'].includes(s.replyAlign)) CONFIG.REPLY_ALIGN = s.replyAlign;
     CONFIG.CONFIRM_CLEAR_ALL = s.confirmClearAll !== false;
     CONFIG.SUMMARIZE_ON_RESET = s.summarizeOnReset !== false;
     if (typeof s.speed === 'number') {
@@ -1290,6 +1291,14 @@ function bindToolbar(app) {
     input.style.lineHeight = (L.lineHeight / ratio).toFixed(1) + 'px';
     // 中英文用的不是同一套字体，跟 scribe 的判断保持一致，边打边跟着换
     input.style.fontFamily = `"${pickFontFamily(input.value)}", serif`;
+    // 对齐方式跟纸上的字一致，否则框里靠左、写出来居中，位置对不上
+    input.style.textAlign = CONFIG.REPLY_ALIGN;
+    // 框的左右边界压在正文留白那条线上（CSS 里的 8% 只是兜底，marginX 有上下限，
+    // 屏幕很宽或很窄的时候跟 8% 会差出一截）
+    const marginCss = (L.marginX / ratio).toFixed(1) + 'px';
+    overlay.style.left = marginCss;
+    overlay.style.right = marginCss;
+    overlay.style.top = (L.startY / ratio).toFixed(1) + 'px';
   };
 
   // 输入框高度跟着内容长，下划线始终贴着最后一行——固定行数的话短句下面会空一大截，

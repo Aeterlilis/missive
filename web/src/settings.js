@@ -943,6 +943,7 @@ async function load() {
     applyGlassIntensity(glassIntensity);
 
     // 只有写字页会用到，设置页没有那排工具栏可预览，所以只回填选中态
+    alignPills.setActive(data.replyAlign || 'center');
     setRangeValue('replyFontScale', typeof data.replyFontScale === 'number' ? data.replyFontScale : 1);
     toolbarPills.setActive(data.toolbarPosition || 'left');
 
@@ -1116,6 +1117,7 @@ async function saveAll() {
         inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
         penOnly: $('penOnly').checked,
         replyFontScale: parseFloat($('replyFontScale').value) || 1,
+        replyAlign: alignPills.getActive() || 'center',
         toolbarPosition: toolbarPills.getActive() || 'left',
         confirmClearAll: $('confirmClearAll').checked,
         summarizeOnReset: $('summarizeOnReset').checked,
@@ -1214,6 +1216,7 @@ const chromeThemePills = setupOptionPills('chromeTheme', (value) => {
   setRangeValue('chromeBorderAlpha', p.borderAlpha);
 }); // 点了就实时预览
 const glassPills = setupOptionPills('glassIntensity', applyGlassIntensity); // 点了就实时预览
+const alignPills = setupOptionPills('replyAlign'); // 只影响写字页，这边没得预览
 const toolbarPills = setupOptionPills('toolbarPosition'); // 只影响写字页，这边没得预览
 
 // 自绘滑块：跟写字页 app.js 里同一份逻辑，见 range-slider.css 顶部注释。这里的滑块

@@ -74,6 +74,14 @@
             <button type="button" class="add-btn" data-add="ai_persona" title="新建">＋</button>
           </div>
           <div class="card-stack" data-stack="ai_persona"></div>
+          <!-- 按一下会让 AI 照当前人设，把写字页图标被反复戳时的五档反应写一遍。
+               按钮名字刻意不解释做了什么——那是个彩蛋，写明白就不是彩蛋了。
+               但**代价必须说清楚**：它长在人设卡下面，很容易被当成"保存"顺手一按，
+               而按一下就是一次真金白银的 API 请求。上面这行只讲代价，不讲效果。
+               版式跟"重置对话"完全一致（说明在上、.secondary 按钮在下靠左）——
+               两者是同一类东西：一段说明配一颗独立的动作按钮。 -->
+          <p class="hint" style="margin-top:14px">「磨合」会发起一次 API 请求。它不是保存。</p>
+          <button type="button" id="btn-attune" class="secondary attune-btn">磨合</button>
         </div>
         <div class="card-group" data-group="user_persona">
           <div class="card-group-head">
@@ -141,7 +149,7 @@
         </div>
 
         <h3 style="margin-top:20px">首屏提示文字</h3>
-        <p class="hint">开屏页面引导语，第一行正常大小，换行会变小变淡。每天在所有开启状态的卡片中随机显示一张。</p>
+        <p class="hint">开屏页面引导语，会像回答一样一笔一笔写出来，可以换行。每天在所有开启状态的卡片中随机显示一张。</p>
         <div class="card-group" data-group="hint">
           <div class="card-group-head">
             <span class="card-group-title">提示语列表</span>
@@ -412,6 +420,6 @@
     </form>
   </div>
 
-  <script type="module" src="src/settings.js"></script>
+  <script type="module" src="src/settings.js?v=3"></script>
 </body>
 </html>

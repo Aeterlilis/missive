@@ -881,6 +881,28 @@ document.querySelectorAll('[data-add]').forEach((btn) => {
   });
 });
 
+// 「磨合」：让 AI 照当前人设生成写字页图标被戳时的五档反应。
+// 成功时只在按钮自己身上短暂变个状态，不说发生了什么——说清楚了就不是彩蛋了。
+// 失败另说：接口没配好这种是真故障，得照常报出来，不然跟"按了没反应"分不开。
+$('btn-attune')?.addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  if (btn.classList.contains('working')) return;
+  btn.classList.add('working');
+  btn.textContent = '…';
+  try {
+    const res = await fetch('/api/poke-lines/generate', { method: 'POST' });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `请求失败 ${res.status}`);
+    btn.classList.remove('working');
+    btn.classList.add('done');
+    btn.textContent = '磨合';
+    setTimeout(() => btn.classList.remove('done'), 1200);
+  } catch (err) {
+    btn.classList.remove('working');
+    btn.textContent = '磨合';
+    setStatus('磨合失败: ' + err.message, true);
+  }
+});
+
 $('addProfile').addEventListener('click', async () => {
   try {
     const res = await fetch('/api/profiles', {

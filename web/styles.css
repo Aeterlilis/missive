@@ -69,24 +69,57 @@ html, body {
 }
 body.debug #debug { display: block; }
 
-/* 极淡的提示水印：首次进入时引导，写第一笔后消失 */
+/* 首屏提示语：图标在上、提示语在下，整组在屏幕正中。写第一笔后整组淡出。 */
 #hint {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: var(--hint-font, "LXGW WenKai"), serif;
-  font-size: 28px;
-  color: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   opacity: 1;
   transition: opacity 0.3s;
-  pointer-events: none;
+  pointer-events: none;   /* 只有图标接收点击，见下面那条 */
   z-index: 5;
-  text-align: center;
 }
 #hint.fade { opacity: 0; }
-/* 黑纸背景上黑字看不见，首屏提示得跟着换成白字 */
-body.theme-black #hint { color: #fff; }
+
+/* 图标的可点区域：尺寸由 appicon.js 按图标大小写进来，正好是图标本身。
+   画布比它大一圈，多出来的透明出血不接收点击（否则会抢走纸上的落笔）。 */
+#hint-icon-hit {
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;     /* 触屏上别让原生手势跟点击抢 */
+}
+/* 淡出之后不能还能戳到——透明元素照样接收指针事件 */
+#hint.fade #hint-icon-hit { pointer-events: none; }
+#hint-icon { display: block; pointer-events: none; }
+
+/* 等回答时的指示图标：缩到跟右上角那几个圆形入口一样大，蹲在右下角。
+   摆正中会挡在视线正前方，等待反而更难熬；角落里有东西在动就够了。
+   跟底部工具栏不冲突——工具栏只在 LISTENING 显示，这个只在 THINKING 显示。
+   画布带着一圈出血（抬笔时羽毛要伸出去），所以用 translate 把出血挪出可视区，
+   让图标本身对齐到该在的位置，而不是让出血去贴边。 */
+#thinking-icon {
+  position: fixed;
+  right: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translate(var(--icon-bleed, 0px), var(--icon-bleed, 0px));
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s;
+}
+#thinking-icon.on { opacity: 0.7; }
+
+/* 提示语：外层定宽定高并裁切，宽度决定字号（CONFIG.layout 按画布宽算字号），
+   高度由 app.js 按两行算好写进来。内层画布靠负 margin 把实际内容居中。 */
+#hint-text-wrap {
+  width: min(72vw, 520px);
+  overflow: hidden;
+}
+#hint-text { display: block; }
 
 /* 圆形图标按钮：工具栏按钮 + 右上角历史/设置入口共用同一套样式，
    保证"常驻入口"和"临时工具"视觉上是一套东西，不再有一个淡一个实的割裂感 */
@@ -229,6 +262,20 @@ body.toolbar-bottom #confirm-box.at-toolbar {
   transition: opacity 0.4s;
 }
 #toast.fade { opacity: 0; }
+
+/* 报错档：还是同一块玻璃，只是不自动消失、可以换行、点一下才走。
+   出岔子时纸上那句是它自己的说法（见 pokelines.js 的托辞），气氛归气氛；
+   真正的原因得有个地方讲清楚，不然 API 没配好的人只会看见"墨迹晕开了"。 */
+#toast.sticky {
+  white-space: normal;
+  max-width: min(86vw, 420px);
+  border-radius: 18px;
+  padding: 11px 18px;
+  line-height: 1.55;
+  text-align: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
 
 /* 通用确认框：一句话加几个按钮，样式跟笔刷面板同源 */
 #confirm-box {

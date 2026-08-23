@@ -217,6 +217,16 @@ textarea {
 .secondary:hover { background: var(--ink); color: var(--box-solid); }
 .secondary.small { margin-top: 0; padding: 7px 12px; font-size: 12px; white-space: nowrap; }
 
+/* 「磨合」外观完全走 .secondary——它跟"重置对话"是同一类东西：一段说明配一颗独立的
+   动作按钮，就该长得一样、摆得一样。这里只补两个瞬时状态：按下去等结果时变淡，
+   成功之后亮一下再恢复。按钮自己始终不说它做了什么。 */
+.attune-btn.working { opacity: 0.55; pointer-events: none; }
+.attune-btn.done {
+  background: color-mix(in srgb, var(--accent) 85%, transparent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+}
+
 /* 原生 <input type="file"> 的"选择文件"按钮没法简单地改圆角，
    干脆藏起来，用一个样式统一的 label 顶替 */
 .visually-hidden {

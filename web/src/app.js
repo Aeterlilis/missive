@@ -17,7 +17,9 @@ import { InkLayer } from './ink.js';
 import { strokesToPngBlob, canvasToBlob, postInterpret, postInterpretText } from './capture.js';
 import { OracleStream } from './oracle.js';
 import { Scribe, pickFontFamily } from './scribe.js';
-import { clearRegion } from './dissolve.js';
+import { clearRegion, dissolvePass } from './dissolve.js';
+import { AppIcon } from './appicon.js';
+import { PokeSequence, FallbackLines } from './pokelines.js';
 
 const S = {
   LISTENING: 'LISTENING',
@@ -45,6 +47,45 @@ class App {
     this.ink = new InkLayer(this.canvas, this.ctx);
     this.scribe = new Scribe(this.ctx);
 
+    // 首屏提示语自己一块画布、自己一个 scribe，跟主画布上的笔迹/AI 回复完全隔开——
+    // 主画布会被清屏、撤销、饮墨反复整块重画，提示语搭在上面迟早被顺手抹掉。
+    this.hintWrap = document.getElementById('hint-text-wrap');
+    this.hintCanvas = document.getElementById('hint-text');
+    this.hintCtx = this.hintCanvas.getContext('2d', { willReadFrequently: true });
+    this.hintScribe = new Scribe(this.hintCtx);
+    // 提示语永远居中：它挂在居中的图标底下，每条长短还都不一样，跟着"AI回复靠左"
+    // 这类设置走的话，每换一条起始位置一样、结尾参差，整组就散了
+    this.hintScribe.align = 'center';
+    this._hintDissolve = null;   // 正在进行的提示语淡出 { start, stage }
+    this._hintText = '';         // 当前显示的这条（重新排版时要用）
+
+    // 戳一下换一条：五档递进，每档一小撮备选。每次打开都从第一档开始。
+    this.pokeSeq = new PokeSequence();
+    // 出岔子时替 AI 说的那句话。跟戳的那五档一样，也吃「磨合」按人设生成的那套。
+    this.fallbacks = new FallbackLines();
+    // 等 AI 回答那段时间的指示：同一个图标，小一号，循环播"写一遍再抹掉"。
+    // 不抖——纸抖是被戳到的反应，这会儿没人戳它。
+    this.thinkIcon = new AppIcon(document.getElementById('thinking-icon'), {
+      // .icon-btn 是 42px 的实心圆，整块都占满；这个图标是线稿，画面里的纸只占方框的
+      // 七成多，按 42 给会显得比那几个入口小一圈。放到 50 让"看上去的大小"对齐。
+      sizeFn: () => 50,
+      shakeScale: 0,
+      standalone: true,
+    });
+    this._thinkingShown = false;
+
+    this.appIcon = new AppIcon(document.getElementById('hint-icon'), {
+      // 图标里的笔落到纸上的同一刻，下面这行字也开始写——两处一起动才像一件事。
+      // 'silent' 是五档都说完之后的状态：图标照样被戳得抖、照样重写一遍，但写出来的
+      // 还是原来那句。动作有、话没有，这才像不理人，而不是坏了。
+      onWriteStart: () => {
+        const r = this.pokeSeq.next();
+        if (r.kind === 'line') this._writeHint(r.text);
+        else if (r.kind === 'greeting') this._writeHint(greetingText);
+        else this._writeHint(this._hintText);
+      },
+    });
+
     this.state = S.LISTENING;
     this.lastInputAt = performance.now();
     this.turnStrokes = [];      // 本轮提交时的笔迹快照（用于饮墨定位）
@@ -66,6 +107,7 @@ class App {
     this._setupCanvas();
     this._bindInk();
     this._fillPaper();
+    this._setupHint();
     // 页面打开就预加载字体（24MB，提前下，避免回答时卡住）
     this.scribe.ensureFont().catch(() => {});
     this._loop = this._loop.bind(this);
@@ -86,6 +128,152 @@ class App {
     };
     setSize();
     window.addEventListener('resize', setSize);
+  }
+
+  // ─── 首屏提示语 + 可以戳的图标 ────────────────
+  _setupHint() {
+    this.pokeSeq.setPools(pokePools);
+    this.fallbacks.setPools(fallbackPools);
+    this._sizeHintCanvas();
+    window.addEventListener('resize', () => {
+      this._sizeHintCanvas();
+      this.appIcon.resize();
+      this.thinkIcon.resize();
+      // 画布尺寸一变内容就没了，把当前这条原地重排一遍
+      if (this._hintText) this._writeHint(this._hintText);
+    });
+
+    const hitEl = document.getElementById('hint-icon-hit');
+    hitEl.addEventListener('pointerdown', (e) => { e.preventDefault(); this._pokeIcon(); });
+    hitEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._pokeIcon(); }
+    });
+    // 素材加载失败不能连累写字页：图标不显示，提示语照常
+    this.appIcon.load()
+      .then(() => this.appIcon.step(performance.now()))
+      .catch((e) => { console.warn(e.message); hitEl.style.display = 'none'; });
+    this.thinkIcon.load().catch(() => {});   // 加载不出来就是没有指示，不影响回答本身
+
+    this.showGreeting(greetingText);
+  }
+
+  // 提示语画布：宽度由 CSS 定（字号按画布宽算，所以定宽就是定字号），
+  // 高度按两行准备——设置里的提示语支持带一行副标题。
+  _sizeHintCanvas() {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const cssW = this.hintWrap.clientWidth || 320;
+    const w = Math.floor(cssW * dpr);
+    // 字号只跟宽度有关，先随便给个高度问出行高，再拿行高定真正的高度
+    const { lineHeight } = CONFIG.layout(w, 1000);
+    // 高度按两行算，另外上下都多留一截：花体那种笔锋会飘出字格，第一行顶上那些
+    // 往上飘的笔画得有地方待，否则贴着画布上沿直接被切掉。
+    // 还要压过 appendText 的越界线（高度×0.85），卡太紧第二行会被判成溢出。
+    const h = Math.ceil(lineHeight * 3.4);
+    this.hintCanvas.width = w;
+    this.hintCanvas.height = h;
+    this.hintCanvas.style.width = cssW + 'px';
+    this.hintCanvas.style.height = (h / dpr) + 'px';
+    // 裁切框也跟着放宽一点，飘出来的笔锋才不会被框裁掉
+    this.hintWrap.style.height = Math.round((lineHeight * 2.4) / dpr) + 'px';
+    this._hintDpr = dpr;
+    this._hintLineHeight = lineHeight;
+  }
+
+  // 显示招呼语（招呼池那条）。重新打招呼就等于这一轮没被戳过，档位归零。
+  showGreeting(text) {
+    this.pokeSeq.reset();
+    this._writeHint(text);
+  }
+
+  // 把一条提示语写到提示语画布上，走 scribe 一笔笔浮现
+  async _writeHint(text) {
+    this._hintText = String(text || DEFAULT_HINT);
+    this._hintDissolve = null;
+    this.hintScribe.reset();
+    this.hintCtx.clearRect(0, 0, this.hintCanvas.width, this.hintCanvas.height);
+    try {
+      // 提示语卡片允许换行（默认那张就是"写点什么…\n比如：今天发生了什么"）。
+      // scribe 只按宽度折行，不认 \n，得自己拆成一段段依次排下去。
+      // 不从 0 开始：花体往上飘的笔锋要有地方待，贴着上沿起排会被画布切掉。
+      // 排完之后整体居中，这段留白不会显出来。
+      let y = Math.round(this._hintLineHeight * 0.45);
+      for (const para of this._hintText.split('\n')) {
+        if (!para.trim()) continue;
+        await this.hintScribe.appendText(para, y);
+        const ls = this.hintScribe.lines;
+        if (!ls.length) break;
+        y = ls[ls.length - 1].nextY;
+      }
+    } catch (e) {
+      console.warn('提示语排版失败:', e.message);
+      return;
+    }
+    // 实际排成几行是排完才知道的。把这几行在裁切框里居中，一行两行都不会把图标顶得上下跳。
+    const ls = this.hintScribe.lines;
+    if (ls.length) {
+      const top = ls[0].top;
+      const bottom = ls[ls.length - 1].top + ls[ls.length - 1].height;
+      const wrapH = this.hintWrap.clientHeight * this._hintDpr;
+      this.hintCanvas.style.marginTop =
+        Math.round(((wrapH - (bottom - top)) / 2 - top) / this._hintDpr) + 'px';
+    }
+    // 水平方向再按真实墨迹校一次。scribe 的居中是按字符宽度算的，而"。""，"这类
+    // 标点整格里的墨只占左边一小块，结尾带标点的句子看着就会偏右。待写的点这会儿
+    // 已经全在 hintScribe.ink 里了（还没开始画），直接量它的左右极值最准。
+    let minX = Infinity, maxX = -Infinity;
+    for (const p of this.hintScribe.ink) {
+      if (typeof p !== 'object') continue;   // 提笔间隙是个 Symbol，跳过
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+    }
+    if (minX <= maxX) {
+      const dx = ((this.hintCanvas.width - 1 - maxX) - minX) / 2;
+      this.hintCanvas.style.marginLeft = Math.round(dx / this._hintDpr) + 'px';
+    }
+  }
+
+  _pokeIcon() {
+    if (!this.appIcon.ready || !this.appIcon.canPoke) return;
+    if (this.state !== S.LISTENING) return; // 已经开始写字/回答了，这一组本来就淡出了
+    this.appIcon.poke();
+    // 旧的这条用跟饮墨同一套擦除带退场，赶在图标里的笔落纸之前走干净
+    const w = this.hintCanvas.width, h = this.hintCanvas.height;
+    this._hintDissolve = {
+      start: performance.now(),
+      dur: Math.max(200, this.appIcon.writeDelayMs - 60),
+      snapshot: this.hintCtx.getImageData(0, 0, w, h),
+      bbox: { minX: 0, minY: 0, maxX: w, maxY: h },
+    };
+  }
+
+  // 图标动画和提示语每帧都推进，不归状态机管——写字页哪个阶段它都该动
+  _tickHint(now) {
+    this.appIcon.step(now);
+
+    // 等回答的指示：只在 THINKING 那段空白期出现。用"当前状态"直接对齐显示与否，
+    // 而不是在每个状态切换处各写一遍开关，漏掉任何一条路径都不会卡在原地转圈。
+    const thinking = this.state === S.THINKING;
+    if (thinking !== this._thinkingShown) {
+      this._thinkingShown = thinking;
+      this.thinkIcon.canvas.classList.toggle('on', thinking);
+      if (thinking) this.thinkIcon.startLoop();
+      else this.thinkIcon.stopLoop();  // 当前这一遍播完再停，不会僵在写了一半的样子
+    }
+    this.thinkIcon.step(now);
+    if (this._hintDissolve) {
+      const d = this._hintDissolve;
+      const t = Math.min(1, (now - d.start) / d.dur);
+      this._paintWipedSnapshot(this.hintCtx, d.snapshot, d.bbox, t);
+      if (t >= 1) {
+        clearRegion(this.hintCtx, d.bbox);
+        this._hintDissolve = null;
+      }
+    } else if (!this.hintScribe.done) {
+      if (!this._lastHintStepAt || now - this._lastHintStepAt >= CONFIG.SCRIBE_FRAME_MS) {
+        this.hintScribe.step();
+        this._lastHintStepAt = now;
+      }
+    }
   }
 
   // 画布本身透明，纸的颜色/纹理是 CSS 画在它下面的，这里只负责清空重来
@@ -111,6 +299,11 @@ class App {
   _loop(now) {
     document.body.classList.toggle('is-listening', this.state === S.LISTENING);
     document.getElementById('btn-clear-bg')?.classList.toggle('hidden', !this.hasBgImage);
+    try {
+      this._tickHint(now);
+    } catch (e) {
+      console.error('提示语/图标异常', e);
+    }
     try {
       switch (this.state) {
         case S.LISTENING: this._tickListening(now); break;
@@ -179,6 +372,7 @@ class App {
     this._startOracleFromCanvas().catch((e) => {
       console.error('AI 请求失败', e);
       this._oracleFailed = true;
+      showOracleError(e);
       // 不立即抢占饮墨/思考：等 _tickDrinking/_tickThinking 在合适的时机处理
     });
   }
@@ -240,6 +434,7 @@ class App {
     this._startOracleFromText(content).catch((e) => {
       console.error('AI 请求失败', e);
       this._oracleFailed = true;
+      showOracleError(e);
     });
 
     // 先把这段话写到纸上。AI 的回复也归 scribe 管，所以得挡住它别在这时候插进来
@@ -360,7 +555,7 @@ class App {
     this._streamDone = true;
     // 流结束但没收到内容 → 兜底
     if (!this._gotContent && this.state !== S.LINGERING) {
-      this._emergencyLine('……风把字吹散了，能再写一遍吗？');
+      this._emergencyLine(this.fallbacks.pick('blank'));
     }
   }
 
@@ -457,7 +652,7 @@ class App {
     this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
     // 饮墨跑完后才决定下一步，避免 AI 失败兜底抢占动画
     if (this._oracleFailed) {
-      this._emergencyLine('墨迹晕开了……我一时读不出来。');
+      this._emergencyLine(this.fallbacks.pick('unreadable'));
     } else if (this.firstSentenceArrived) {
       this.state = S.REPLYING;
     } else {
@@ -469,12 +664,12 @@ class App {
   _tickThinking(now) {
     // 请求已失败 → 立即走兜底，不要干等超时
     if (this._oracleFailed) {
-      this._emergencyLine('墨迹晕开了……我一时读不出来。');
+      this._emergencyLine(this.fallbacks.pick('unreadable'));
       return;
     }
     // 超时给兜底
     if (now - this.phaseStart > CONFIG.ORACLE_PATIENCE_MS) {
-      this._emergencyLine('……我走神了，能再说一遍吗？');
+      this._emergencyLine(this.fallbacks.pick('distracted'));
     }
     // 不画呼吸点：字被吸走后画面保持干净的白，等待回答自然浮现，更像魔法日记
   }
@@ -733,9 +928,8 @@ async function loadRuntimeConfig() {
     const s = await res.json();
     if (s.font) CONFIG.LATIN_FONT = LATIN_FONT_MAP[s.font] || LATIN_FONT_MAP.pinyon;
     await loadCjkFont(s);
-    // 首屏提示字体跟 AI 回复一样按内容判断：含中文用中文手写字体，纯英文/其他文字用英文字体
-    // 用的默认兜底文案要跟 renderHint() 里的保持一致，不然没设置提示语时文字是中文默认语但字体判成英文
-    document.documentElement.style.setProperty('--hint-font', `"${pickFontFamily(s.hintText || '用笔在这里写点什么…')}"`);
+    // 提示语的字体不用在这里管了：它现在走 scribe，跟 AI 回复共用同一套按内容判断
+    // 字体的逻辑（含中文用中文手写体，纯英文用英文体），见 scribe 的 pickFontFamily。
     // 主题色：设置页那些控件早就在用这个变量了，写字页一直没接——笔刷预设按钮/开关这些也得跟着走。
     // --accent-contrast 是贴在主题色底上的文字/图标该用黑还是白，根据主题色本身明暗算，逻辑
     // 跟设置页 pickContrastColor 一样（主题色可以自定义成浅色，写死白字会看不清）。
@@ -803,6 +997,8 @@ async function loadRuntimeConfig() {
       CONFIG.DRINK_FADE_MS = Math.round(s.inkFadeSeconds * 1000);
     }
     CONFIG.PEN_ONLY = !!s.penOnly;
+    pokePools = s.pokeLines || null;         // 没让 AI 生成过就是 null，前端用内置那套
+    fallbackPools = s.fallbackLines || null;
     renderHint(s.hintText);
     applyTheme(s.theme, s.bgColor);
   } catch (e) {
@@ -810,17 +1006,18 @@ async function loadRuntimeConfig() {
   }
 }
 
+// 首屏那条提示语（招呼池：设置里的 hint 卡片，每天随机一条）。
+// loadRuntimeConfig 跑在 new App() 之前，那会儿还没有画布可写，所以先存下来，
+// 由 App 构造完之后自己取走。
+export const DEFAULT_HINT = '用笔在这里写点什么…';
+let greetingText = DEFAULT_HINT;
+// 戳出来的那五档：AI 按人设生成过就用它的，没有就是 null（前端回落到内置兜底）
+let pokePools = null;
+// 出岔子时那三种托辞，同上
+let fallbackPools = null;
 function renderHint(text) {
-  const hintEl = document.getElementById('hint');
-  if (!hintEl) return;
-  const lines = String(text || '用笔在这里写点什么…').split('\n');
-  hintEl.innerHTML = lines
-    .map((line, i) => (i === 0 ? escapeHtml(line) : `<br /><span style="font-size:18px;opacity:0.7">${escapeHtml(line)}</span>`))
-    .join('');
-}
-
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  greetingText = String(text || DEFAULT_HINT);
+  window.__app?.showGreeting(greetingText);
 }
 
 const THEME_CLASSES = ['theme-parchment', 'theme-lined', 'theme-grid', 'theme-xuanzhi', 'theme-watercolor', 'theme-crumpled', 'theme-black', 'theme-custom'];
@@ -848,23 +1045,45 @@ function applyToolbarPosition(position) {
 // 一句话的短提示，自己淡出。写字页没有状态栏那种地方，重置对话这类
 // "点了之后看不出发生了什么"的操作需要一点回执。
 let toastTimer = 0;
-function toast(text) {
+// sticky：报错用。不自动消失，点一下才关——一秒半的提示，出错时根本来不及看清。
+function toast(text, { sticky = false } = {}) {
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = text;
   el.classList.remove('hidden');
   // 先掉 class 再强制回流，连着点两次也能重新播一遍淡出
   el.classList.remove('fade');
+  el.classList.toggle('sticky', sticky);
   void el.offsetWidth;
   clearTimeout(toastTimer);
+  if (sticky) return;
   toastTimer = setTimeout(() => {
     el.classList.add('fade');
     setTimeout(() => el.classList.add('hidden'), 400);
   }, 1600);
 }
 
+function hideToast() {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  clearTimeout(toastTimer);
+  el.classList.add('fade');
+  setTimeout(() => {
+    el.classList.add('hidden');
+    el.classList.remove('sticky');
+  }, 400);
+}
+
+// 出岔子时纸上会浮现一句它自己的说法（按人设生成，见 pokelines.js），那是气氛。
+// 但气氛没法告诉人"密钥填错了"。这里另外把真正的原因摆出来，两者并存。
+function showOracleError(err) {
+  toast('这次没能问到回答：' + (err && err.message ? err.message : '未知错误'), { sticky: true });
+}
+
 // 工具栏 / 导入 / 打字模式的按钮绑定
 function bindToolbar(app) {
+  document.getElementById('toast')?.addEventListener('click', hideToast);
+
   const $ = (id) => document.getElementById(id);
 
   $('btn-undo').addEventListener('click', () => app.undoLastStroke());

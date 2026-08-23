@@ -60,6 +60,13 @@ function defaultsWithProfile() {
     hintText: DEFAULT_HINT_TEXT, // 旧版遗留字段：迁移到 hint 卡片后只在"一张卡片都没有"时当兜底用，见 resolveHintText
     hintPickDate: null,   // 上次抽首屏提示语的日期（本机 YYYY-MM-DD），换了新的一天才重新抽
     hintPickCardId: null, // 当天抽中的那张 hint 卡片 id
+    // 戳写字页那个图标时换出来的话：五档递进，每档一小撮备选。
+    // null = 还没让 AI 按人设生成过，前端用自己内置的兜底那套（见 web/src/pokelines.js）。
+    // 故意不在设置页里列成可编辑项——这是彩蛋，见 /api/poke-lines/generate。
+    pokeLines: null,
+    // 出岔子时替 AI 说的那句话：{ unreadable, distracted, blank } 三种各一组备选。
+    // 同样由「磨合」生成，null / 缺哪种就用前端内置的那份（见 web/src/pokelines.js）。
+    fallbackLines: null,
     theme: 'solid', // solid(纯色，配 bgColor) | parchment | lined | grid | xuanzhi | watercolor | crumpled | black | custom
     themeColor: '#000000', // 开关/滑块这些控件的统一主题色
     bgColor: '#ffffff', // 纸张背景选"纯色"（theme:'solid'）时用的颜色

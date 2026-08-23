@@ -18,6 +18,10 @@ export class Scribe {
     this.done = true;                 // 当前批是否写完
     this.lines = [];                  // 已渲染文本的行几何（用于淡出时定位区域）
     this.overflow = null;             // 这一页放不下、留给下一页的行（见 appendText）
+    // 水平对齐。默认跟随设置里的 CONFIG.REPLY_ALIGN；写字页的首屏提示语把它锁成
+    // 'center'——那行字挂在居中的图标底下，不该跟着"AI回复靠左"这类设置跑偏。
+    this.align = null;
+    this._inkRadius = null;          // 排版时按字号算出来的笔尖半径，见 appendText
     // 离屏渲染用
     this._off = null;                 // OffscreenCanvas / canvas
     this._octx = null;
@@ -57,6 +61,11 @@ export class Scribe {
     const cw = this.ctx.canvas.width;
     const ch = this.ctx.canvas.height;
     const L = CONFIG.layout(cw, ch);
+    // 笔尖粗细跟着字号走。写死一个半径的话，字号一小，笔画之间的空隙比笔尖还窄，
+    // 一个字就糊成一坨——小屏、缩小过的回复字号、首屏提示语都会撞上。
+    // 以基准字号（REPLY_FONT_PX）处等于 CONFIG.INK_RADIUS 为锚点等比缩放，
+    // 所以默认那档的观感跟以前完全一样，只有字小下去时才变细。
+    this._inkRadius = Math.max(1, CONFIG.INK_RADIUS * L.fontPx / CONFIG.REPLY_FONT_PX);
     const preWrapped = Array.isArray(text);
     const plain = preWrapped ? text.map((l) => l.text).join('') : text;
     const fontFamily = pickFontFamily(plain);
@@ -85,9 +94,26 @@ export class Scribe {
   // 渲染一行文字 → 细化 → trace，把折线加入 this.ink
   _layoutLine(text, y, textWidth, L, fontFamily) {
     const px = L.fontPx;
-    // 离屏画一整行
-    const W = Math.ceil(textWidth) + 2;
-    const H = Math.ceil(px * 1.4) + 2;
+    const advance = Math.ceil(textWidth) + 2;   // 字符推进宽度，对齐算的是这个
+    const emHeight = Math.ceil(px * 1.4);
+
+    // 花体、草书这类字体的笔锋会飘到"字格"外面去：往上超出顶线、往左甩到起笔点
+    // 左边、往右拖过推进宽度。离屏画布要是只按字格开，飘出去的部分在**画的那一步**
+    // 就被裁掉了，后面细化、描线都只是照着残缺的图形干活——纸上就会看到断掉的笔画。
+    // 所以先量一次真实墨迹范围，四周按需留边。
+    // actualBoundingBox* 个别引擎给不出来，取不到就退回原来的行为（不留边）。
+    const probe = this._octx;
+    probe.textBaseline = 'top';
+    probe.font = `${px}px "${fontFamily}", serif`;
+    const m = probe.measureText(text);
+    const over = (v) => (Number.isFinite(v) && v > 0 ? Math.ceil(v) : 0);
+    const padTop = over(m.actualBoundingBoxAscent);                   // 顶线以上
+    const padBottom = over(m.actualBoundingBoxDescent - emHeight);    // 字格底以下
+    const padLeft = over(m.actualBoundingBoxLeft);                    // 起笔点左边
+    const padRight = over(m.actualBoundingBoxRight - m.width);        // 推进宽度右边
+
+    const W = padLeft + advance + padRight;
+    const H = padTop + emHeight + padBottom + 2;
     const off = makeOffscreen(W, H);
     const oc = off.getContext('2d', { willReadFrequently: true });
     oc.fillStyle = '#fff';
@@ -95,7 +121,7 @@ export class Scribe {
     oc.fillStyle = '#000';
     oc.textBaseline = 'top';
     oc.font = `${px}px "${fontFamily}", serif`;
-    oc.fillText(text, 1, 1);
+    oc.fillText(text, padLeft + 1, padTop + 1);
 
     const img = oc.getImageData(0, 0, W, H);
     const mask = toBinaryMask(img);       // Uint8Array，1=墨迹 0=空白
@@ -104,20 +130,29 @@ export class Scribe {
 
     // 行在可见画布上的水平位置。对齐方式是设置项（见 CONFIG.REPLY_ALIGN）：
     // 左/右对齐都贴着正文留白 marginX，跟打字框的边界是同一条线；居中是老行为。
+    // 对齐算的是字格（推进宽度），不是含笔锋的墨迹范围——不然一行有没有飘出来的
+    // 笔锋，整行的落点就会不一样，看着像忽左忽右。
     const canvasW = this.ctx.canvas.width;
-    const align = CONFIG.REPLY_ALIGN;
+    const align = this.align || CONFIG.REPLY_ALIGN;
     const xOff = align === 'left' ? L.marginX
-      : align === 'right' ? canvasW - L.marginX - W
-      : Math.round((canvasW - W) / 2);
+      : align === 'right' ? canvasW - L.marginX - advance
+      : Math.round((canvasW - advance) / 2);
 
-    // 把这一行的折线（相对行画布的坐标）平移到可见画布坐标，加入待写序列
+    // 把这一行的折线（相对行画布的坐标）平移到可见画布坐标，加入待写序列。
+    // 减去四周留的边，字格左上角仍旧落在 (xOff, y)，跟没留边时一模一样。
     for (const s of strokes) {
-      const ordered = s.map((p) => ({ x: p.x + xOff, y: p.y + y }));
+      const ordered = s.map((p) => ({ x: p.x + xOff - padLeft, y: p.y + y - padTop }));
       this.ink.push(...ordered);
       // 笔画之间空一个"提笔"间隙
       this.ink.push(BREAK);
     }
-    return { text, y, nextY: y + L.lineHeight, top: y, height: H, xOff, w: W };
+    // top/height/xOff/w 报的是**实际墨迹**占的范围（含笔锋），淡出和居中都按它算才不会
+    // 把飘出去的那截漏在外面。nextY 仍旧按字格走，行距不受笔锋影响。
+    return {
+      text, y, nextY: y + L.lineHeight,
+      top: y - padTop, height: H,
+      xOff: xOff - padLeft, w: W,
+    };
   }
 
   // 推进一帧：写 N 个点。返回 true 表示全部写完。
@@ -125,7 +160,7 @@ export class Scribe {
     if (this.done) return true;
     const ctx = this.ctx;
     const budget = CONFIG.SCRIBE_POINTS_PER_FRAME;
-    const r = CONFIG.INK_RADIUS;
+    const r = this._inkRadius || CONFIG.INK_RADIUS; // 排版时按字号算好的，见 appendText
     let written = 0;
     ctx.globalAlpha = 1; // AI 回复始终不透明，不受用户笔刷透明度影响
     ctx.fillStyle = CONFIG.INK_COLOR;

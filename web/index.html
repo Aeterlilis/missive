@@ -26,8 +26,24 @@
   <!-- 全屏画布：用户笔迹 + AI 手写都画在这里 -->
   <canvas id="paper"></canvas>
 
-  <!-- 首次引导提示：内容由设置里的 hintText 决定，见 app.js -->
-  <div id="hint"></div>
+  <!-- 首屏提示语：图标 + 提示语一组，垂直居中。写第一笔时整组淡出（#hint.fade）。
+       提示语不是 DOM 文字而是画在 canvas 上的——它走 scribe，跟 AI 回复用同一套
+       手写动画一笔笔浮现，两处的字才能长得一样。
+       图标可以戳，戳一下播一遍动画并换一条提示语，见 appicon.js / pokelines.js。 -->
+  <div id="hint">
+    <!-- 可点区域只有图标本身那么大。画布比它大一圈（抬笔时羽毛要伸出去），那圈是
+         透明的，不该抢走纸上的落笔——图标正压在纸中央，用户很可能就从那儿起笔。 -->
+    <div id="hint-icon-hit" role="button" tabindex="0" aria-label="戳一下">
+      <canvas id="hint-icon"></canvas>
+    </div>
+    <!-- 外层定高并裁切，内层画布按最多两行准备；写完之后把实际那几行在框里居中。
+         这样一行和两行的提示语都不会把上面的图标顶得上下乱跳。 -->
+    <div id="hint-text-wrap"><canvas id="hint-text"></canvas></div>
+  </div>
+
+  <!-- 等 AI 回答时的指示：同一个图标，小一号，循环播"写一遍再抹掉"。
+       这段等待原本是完全空白的，分不清是在想还是出错了。 -->
+  <canvas id="thinking-icon"></canvas>
 
   <!-- 短提示：重置对话这类没有画面变化的操作用它回执一下，自己淡出 -->
   <div id="toast" class="hidden"></div>
@@ -192,6 +208,6 @@
   </style>
 
   <!-- 模块以 ESM 加载，app.js 是主入口。?v= 强制刷新缓存 -->
-  <script type="module" src="src/app.js?v=20"></script>
+  <script type="module" src="src/app.js?v=32"></script>
 </body>
 </html>

@@ -483,7 +483,7 @@ textarea {
   font-size: 13px;
   opacity: 0.8;
 }
-.slider-row input[type="range"] { flex: 1; }
+/* .mslider（自绘轨道+手柄的包装元素）本身自带 flex:1，见 range-slider.css */
 
 /* 主题色/纸张纯色背景的选色盘样式在 color-picker.css 里（跟写字页笔刷颜色共用一份），这里只补个页面专属间距 */
 .color-presets { margin-top: 8px; }

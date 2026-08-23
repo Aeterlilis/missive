@@ -946,7 +946,7 @@ async function load() {
 
     $('maxTokens').value = data.maxTokens || 280;
     renderAllCards();
-    $('speed').value = data.speed || 6;
+    setRangeValue('speed', data.speed || 6);
     fontPills.setActive(data.font || 'pinyon');
 
     const theme = data.theme || 'white';
@@ -967,12 +967,12 @@ async function load() {
     applyChromeTheme(chromeInkHex, chromeBoxHex, chromeBoxAlpha);
     chromeBoxColorPicker.setHex(chromeBoxHex);
     chromeInkColorPicker.setHex(chromeInkHex);
-    $('chromeBoxAlpha').value = chromeBoxAlpha;
+    setRangeValue('chromeBoxAlpha', chromeBoxAlpha);
     chromeBorderHex = data.chromeBorder || chromeDefaults.border;
     chromeBorderAlpha = typeof data.chromeBorderAlpha === 'number' ? data.chromeBorderAlpha : chromeDefaults.borderAlpha;
     applyBorderColor(chromeBorderHex, chromeBorderAlpha);
     chromeBorderColorPicker.setHex(chromeBorderHex);
-    $('chromeBorderAlpha').value = chromeBorderAlpha;
+    setRangeValue('chromeBorderAlpha', chromeBorderAlpha);
     syncChromeCustomVisibility(chromeTheme);
 
     const glassIntensity = data.glassIntensity || 'standard';
@@ -997,11 +997,11 @@ async function load() {
     $('contextMax').textContent = data.contextTurns ?? 10;
 
     $('autoSendEnabled').checked = data.autoSendEnabled !== false;
-    $('autoSendSeconds').value = data.autoSendSeconds ?? 2.8;
-    $('fadeSeconds').value = data.fadeSeconds ?? 1.5;
-    $('lingerSeconds').value = data.lingerSeconds ?? 7;
-    $('inkLingerSeconds').value = data.inkLingerSeconds ?? 2;
-    $('inkFadeSeconds').value = data.inkFadeSeconds ?? 0.9;
+    setRangeValue('autoSendSeconds', data.autoSendSeconds ?? 2.8);
+    setRangeValue('fadeSeconds', data.fadeSeconds ?? 1.5);
+    setRangeValue('lingerSeconds', data.lingerSeconds ?? 7);
+    setRangeValue('inkLingerSeconds', data.inkLingerSeconds ?? 2);
+    setRangeValue('inkFadeSeconds', data.inkFadeSeconds ?? 0.9);
     $('penOnly').checked = !!data.penOnly;
   } catch (e) {
     setStatus('读取设置失败: ' + e.message, true);
@@ -1237,10 +1237,76 @@ const chromeThemePills = setupOptionPills('chromeTheme', (value) => {
   chromeBoxColorPicker.setHex(p.box);
   chromeInkColorPicker.setHex(p.ink);
   chromeBorderColorPicker.setHex(p.border);
-  $('chromeBoxAlpha').value = p.alpha;
-  $('chromeBorderAlpha').value = p.borderAlpha;
+  setRangeValue('chromeBoxAlpha', p.alpha);
+  setRangeValue('chromeBorderAlpha', p.borderAlpha);
 }); // 点了就实时预览
 const glassPills = setupOptionPills('glassIntensity', applyGlassIntensity); // 点了就实时预览
+
+// 自绘滑块：跟写字页 app.js 里同一份逻辑，见 range-slider.css 顶部注释。这里的滑块
+// （时长/透明度）都是页面自带的静态 <input>，不是动态生成的，直接在启动时挂一遍就行。
+function enhanceRangeSlider(el) {
+  const wrap = document.createElement('span');
+  wrap.className = 'mslider';
+  el.parentNode.insertBefore(wrap, el);
+  wrap.appendChild(el);
+  const track = document.createElement('div'); track.className = 'mslider-track';
+  const fill = document.createElement('div'); fill.className = 'mslider-fill';
+  const thumb = document.createElement('div'); thumb.className = 'mslider-thumb';
+  wrap.append(track, fill, thumb);
+
+  const THUMB = 22;
+  function ratio() {
+    const min = parseFloat(el.min), max = parseFloat(el.max), v = parseFloat(el.value);
+    return max > min ? Math.min(1, Math.max(0, (v - min) / (max - min))) : 0;
+  }
+  function render() {
+    const x = THUMB / 2 + ratio() * Math.max(0, wrap.clientWidth - THUMB);
+    fill.style.width = x + 'px';
+    thumb.style.left = x + 'px';
+  }
+  render();
+  el.addEventListener('input', render);
+  window.addEventListener('resize', render);
+
+  function valueFromClientX(clientX) {
+    const rect = wrap.getBoundingClientRect();
+    const x = Math.min(rect.width - THUMB / 2, Math.max(THUMB / 2, clientX - rect.left));
+    const r = rect.width > THUMB ? (x - THUMB / 2) / (rect.width - THUMB) : 0;
+    const min = parseFloat(el.min), max = parseFloat(el.max), step = parseFloat(el.step) || 1;
+    let v = min + r * (max - min);
+    v = Math.round(v / step) * step;
+    return Math.min(max, Math.max(min, v));
+  }
+  let dragging = false;
+  thumb.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    try { thumb.setPointerCapture(e.pointerId); } catch {}
+  });
+  thumb.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const v = valueFromClientX(e.clientX);
+    if (parseFloat(el.value) !== v) {
+      el.value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  thumb.addEventListener('pointerup', endDrag);
+  thumb.addEventListener('pointercancel', endDrag);
+}
+document.querySelectorAll('input[type="range"]').forEach(enhanceRangeSlider);
+
+// 给滑块赋值同时得派发一下 input 事件，自绘手柄的位置才会跟着重算（见 enhanceRangeSlider
+// 只监听 el 的 'input' 事件来重绘；直接改 .value 属性浏览器不会自动触发这个事件）。
+function setRangeValue(id, v) {
+  const el = $(id);
+  el.value = v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
 load();
 setupSectionNav();

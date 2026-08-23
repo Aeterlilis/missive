@@ -188,7 +188,7 @@ function innerWidth() {
 
 // ─── 字体选择 ───────────────────────────────────────────────
 // 纯英文（不含中文）用设置里选的字体，含中文的用 CONFIG.CJK_FONT（默认文楷，可被自定义字体覆盖）。
-function pickFontFamily(text) {
+export function pickFontFamily(text) {
   return hasCjk(text) ? CONFIG.CJK_FONT : CONFIG.LATIN_FONT;
 }
 function hasCjk(text) {

@@ -14,7 +14,7 @@ import { CONFIG, BRUSH_PRESETS } from './config.js';
 import { InkLayer } from './ink.js';
 import { strokesToPngBlob, canvasToBlob, postInterpret, postInterpretText } from './capture.js';
 import { OracleStream } from './oracle.js';
-import { Scribe } from './scribe.js';
+import { Scribe, pickFontFamily } from './scribe.js';
 import { clearRegion } from './dissolve.js';
 
 const S = {
@@ -636,8 +636,9 @@ async function loadRuntimeConfig() {
     const s = await res.json();
     if (s.font) CONFIG.LATIN_FONT = LATIN_FONT_MAP[s.font] || LATIN_FONT_MAP.pinyon;
     await loadCjkFont(s);
-    // 首屏提示是中文，字体跟设置里选的中文手写字体保持一致，不再写死霞鹜文楷
-    document.documentElement.style.setProperty('--hint-font', `"${CONFIG.CJK_FONT}"`);
+    // 首屏提示字体跟 AI 回复一样按内容判断：含中文用中文手写字体，纯英文/其他文字用英文字体
+    // 用的默认兜底文案要跟 renderHint() 里的保持一致，不然没设置提示语时文字是中文默认语但字体判成英文
+    document.documentElement.style.setProperty('--hint-font', `"${pickFontFamily(s.hintText || '用笔在这里写点什么…')}"`);
     // 主题色：设置页那些控件早就在用这个变量了，写字页一直没接——笔刷预设按钮/开关这些也得跟着走。
     // --accent-contrast 是贴在主题色底上的文字/图标该用黑还是白，根据主题色本身明暗算，逻辑
     // 跟设置页 pickContrastColor 一样（主题色可以自定义成浅色，写死白字会看不清）。
@@ -779,6 +780,7 @@ function bindToolbar(app) {
 
   function syncBrushUI() {
     sizePicker.value = CONFIG.BRUSH_SIZE;
+    sizePicker.dispatchEvent(new Event('input', { bubbles: true })); // 让自绘滑块的手柄位置跟着同步，见 enhanceRangeSlider
     document.querySelectorAll('.brush-presets button').forEach((b) => {
       b.classList.toggle('active', b.dataset.preset === CONFIG.BRUSH_PRESET_NAME);
     });
@@ -1141,6 +1143,63 @@ function bindToolbar(app) {
   });
 }
 
+// 自绘滑块：原生 input 整个不接收指针事件，自己画轨道+进度条+手柄，只有手柄能拖——
+// 见 range-slider.css 顶部注释。跟设置页 settings.js 里同一份逻辑。
+function enhanceRangeSlider(el) {
+  const wrap = document.createElement('span');
+  wrap.className = 'mslider';
+  el.parentNode.insertBefore(wrap, el);
+  wrap.appendChild(el);
+  const track = document.createElement('div'); track.className = 'mslider-track';
+  const fill = document.createElement('div'); fill.className = 'mslider-fill';
+  const thumb = document.createElement('div'); thumb.className = 'mslider-thumb';
+  wrap.append(track, fill, thumb);
+
+  const THUMB = 22;
+  function ratio() {
+    const min = parseFloat(el.min), max = parseFloat(el.max), v = parseFloat(el.value);
+    return max > min ? Math.min(1, Math.max(0, (v - min) / (max - min))) : 0;
+  }
+  function render() {
+    const x = THUMB / 2 + ratio() * Math.max(0, wrap.clientWidth - THUMB);
+    fill.style.width = x + 'px';
+    thumb.style.left = x + 'px';
+  }
+  render();
+  el.addEventListener('input', render);
+  window.addEventListener('resize', render);
+
+  function valueFromClientX(clientX) {
+    const rect = wrap.getBoundingClientRect();
+    const x = Math.min(rect.width - THUMB / 2, Math.max(THUMB / 2, clientX - rect.left));
+    const r = rect.width > THUMB ? (x - THUMB / 2) / (rect.width - THUMB) : 0;
+    const min = parseFloat(el.min), max = parseFloat(el.max), step = parseFloat(el.step) || 1;
+    let v = min + r * (max - min);
+    v = Math.round(v / step) * step;
+    return Math.min(max, Math.max(min, v));
+  }
+  let dragging = false;
+  thumb.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    try { thumb.setPointerCapture(e.pointerId); } catch {}
+  });
+  thumb.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const v = valueFromClientX(e.clientX);
+    if (parseFloat(el.value) !== v) {
+      el.value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  thumb.addEventListener('pointerup', endDrag);
+  thumb.addEventListener('pointercancel', endDrag);
+}
+
 // 启动
 window.addEventListener('DOMContentLoaded', async () => {
   if (new URLSearchParams(location.search).has('debug')) {
@@ -1149,4 +1208,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadRuntimeConfig();
   window.__app = new App();
   bindToolbar(window.__app);
+  document.querySelectorAll('input[type="range"]').forEach(enhanceRangeSlider);
 });

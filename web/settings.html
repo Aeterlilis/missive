@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="chrome-theme.css" />
   <link rel="stylesheet" href="paper-theme.css" />
   <link rel="stylesheet" href="color-picker.css" />
+  <link rel="stylesheet" href="range-slider.css" />
   <link rel="stylesheet" href="settings.css" />
 </head>
 <body>
@@ -215,7 +216,7 @@
         </div>
 
         <h3 style="margin-top:20px">界面配色</h3>
-        <p class="hint">所有卡片/面板/按钮的底色。白天/夜间是预调好的两套，选"自定义"能自己调底色、透明度和文字颜色。</p>
+        <p class="hint"></p>
         <div class="option-pills" data-group="chromeTheme">
           <button type="button" class="option-pill" data-value="day">白天</button>
           <button type="button" class="option-pill" data-value="night">夜间</button>
@@ -223,7 +224,7 @@
         </div>
 
         <h3 style="margin-top:16px">玻璃强度</h3>
-        <p class="hint" id="glass-intensity-hint">标准是普通毛玻璃；"更透亮"底色更淡、更清透，边缘会有高光，支持的设备上还会有轻微的折射扭曲。</p>
+        <p class="hint" id="glass-intensity-hint">标准是普通毛玻璃；"更透亮"更清透，支持的设备上还会有轻微的折射扭曲。</p>
         <div class="option-pills" data-group="glassIntensity">
           <button type="button" class="option-pill" data-value="standard">标准</button>
           <button type="button" class="option-pill" data-value="enhanced">更透亮</button>
@@ -285,7 +286,7 @@
           </div>
 
           <h3 style="margin-top:16px">边框颜色</h3>
-          <p class="hint">跟文字颜色是分开的两个东西——比如想把边框调淡一点，不会连文字一起变淡看不清。</p>
+          <p class="hint"></p>
           <div id="chrome-border-presets" class="color-presets">
             <button type="button" class="color-swatch" data-color="#000000" title="纯黑" style="background:#000000"></button>
             <button type="button" class="color-swatch" data-color="#ffffff" title="纯白" style="background:#ffffff"></button>

@@ -192,7 +192,7 @@ body.theme-black #hint { color: #fff; }
   color: var(--accent-contrast, #fff);
 }
 .brush-controls { display: flex; align-items: center; gap: 10px; }
-.brush-controls input[type="range"] { flex: 1; }
+/* .mslider（自绘轨道+手柄的包装元素）本身自带 flex:1，见 range-slider.css */
 
 /* 颜色预设 + 自定义色轮的样式在 color-picker.css 里（跟设置页的选色盘共用一份） */
 

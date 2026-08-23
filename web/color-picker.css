@@ -4,6 +4,7 @@
 
 .color-presets { display: flex; gap: 6px; }
 .color-swatch {
+  appearance: none; -webkit-appearance: none;
   width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-color);
   padding: 0; cursor: pointer; opacity: 0.55;
 }

@@ -46,7 +46,6 @@ class App {
     this.lastInputAt = performance.now();
     this.turnStrokes = [];      // 本轮提交时的笔迹快照（用于饮墨定位）
     this.oracle = null;         // OracleStream
-    this.oracleIter = null;
     this.firstSentenceArrived = false;
     this.lingerUntil = 0;
     this.phaseStart = 0;        // 当前阶段起始时间
@@ -293,7 +292,6 @@ class App {
   // 不受主循环 tick 影响，避免"pullNext 没被调用"的竞态。
   async _consumeOracle() {
     const iter = this.oracle.sentences();
-    this.oracleIter = iter; // 保留引用（调试/兼容旧逻辑）
     try {
       while (true) {
         const { value, done } = await iter.next();
@@ -471,40 +469,6 @@ class App {
     this.state = S.LINGERING;
   }
 
-  // 拉 oracle 的下一句，喂给 scribe。流结束置 _streamDone。
-  async _pullNext() {
-    if (this.firstSentenceArrived === false) this.firstSentenceArrived = true;
-    try {
-      const { value, done } = await this.oracleIter.next();
-      if (done) {
-        this._streamDone = true;
-        // 流结束但确实一句都没收到（不是 appendText 还在 await 的时序假象）→ 兜底
-        if (!this._gotContent && this.state !== S.LINGERING) {
-          this._emergencyLine('……风把字吹散了，能再写一遍吗？');
-        }
-        this._pulling = null;
-        return;
-      }
-      if (value) {
-        const len = await this.scribe.appendText(value, this._replyY);
-        this.charCount += len;
-        this._gotContent = true;  // 真正写入了一句话
-        // 更新下一行起点
-        const box = this.scribe.replyBBox();
-        if (box) this._replyY = box.maxY + 8;
-        this.firstSentenceArrived = true;
-        if (this.state === S.THINKING) {
-          this._drawThinkDot(false);
-          this.state = S.REPLYING;
-        }
-      }
-    } catch (e) {
-      console.error('拉取回答失败', e);
-      this._streamDone = true;
-    }
-    this._pulling = null;
-  }
-
   // ─── LINGERING：停留展示 ───────────────────────
   _tickLingering(now) {
     if (now >= this.lingerUntil) {
@@ -573,7 +537,6 @@ class App {
   _resetToListening(userInterrupted) {
     this.state = S.LISTENING;
     this.oracle = null;
-    this.oracleIter = null;
     this._pulling = null;
     this._streamDone = false;
     this._oracleFailed = false;
@@ -751,6 +714,7 @@ async function loadRuntimeConfig() {
     // 边框颜色/透明度是独立的 --border-color（见上面），不归它管。
     applyGlassIntensity(s.glassIntensity);
     applyToolbarPosition(s.toolbarPosition);
+    if (typeof s.replyFontScale === 'number') CONFIG.REPLY_FONT_SCALE = s.replyFontScale;
     CONFIG.CONFIRM_CLEAR_ALL = s.confirmClearAll !== false;
     CONFIG.SUMMARIZE_ON_RESET = s.summarizeOnReset !== false;
     if (typeof s.speed === 'number') {

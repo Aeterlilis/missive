@@ -943,6 +943,7 @@ async function load() {
     applyGlassIntensity(glassIntensity);
 
     // 只有写字页会用到，设置页没有那排工具栏可预览，所以只回填选中态
+    setRangeValue('replyFontScale', typeof data.replyFontScale === 'number' ? data.replyFontScale : 1);
     toolbarPills.setActive(data.toolbarPosition || 'left');
 
     cjkFontPills.setActive(data.cjkFont || 'default');
@@ -1114,6 +1115,7 @@ async function saveAll() {
         inkLingerSeconds: parseFloat($('inkLingerSeconds').value) || 2,
         inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
         penOnly: $('penOnly').checked,
+        replyFontScale: parseFloat($('replyFontScale').value) || 1,
         toolbarPosition: toolbarPills.getActive() || 'left',
         confirmClearAll: $('confirmClearAll').checked,
         summarizeOnReset: $('summarizeOnReset').checked,

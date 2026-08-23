@@ -26,12 +26,21 @@ export const CONFIG = {
   REPLY_FONT_PX: 96,
   MARGIN_X: 120,
 
+  // 回复字号的用户缩放系数，由设置里的滑块决定（见 settings.js 的 replyFontScale，
+  // 写字页在 loadRuntimeConfig 里读进来）。1 = 原来的大小。
+  // 做成系数而不是固定像素值：字号本来就按屏宽自适应，写死像素的话换个设备就不对了，
+  // 系数能在保留自适应的前提下整体调大调小。
+  REPLY_FONT_SCALE: 1,
+
   // ─── 屏幕自适应（核心）──────────────────────────
   // 根据画布宽高，算出合适的字号、留白、回答可用区域。
   // 目标：任何设备上，回答都不超出屏幕底部，字号随屏宽缩放。
   layout(canvasW, canvasH) {
-    // 字号 = 屏宽的 1/12，限制在 [40, 96] 之间（小屏不小于40，大屏不超过96）
-    const fontPx = Math.max(40, Math.min(96, Math.round(canvasW / 12)));
+    // 字号 = 屏宽的 1/12，限制在 [40, 96] 之间（小屏不小于40，大屏不超过96），
+    // 再乘上用户的缩放系数。乘完另夹一道绝对上下限，防止滑块拉到极端时
+    // 小到看不清或大到一行放不下两个字。
+    const base = Math.max(40, Math.min(96, Math.round(canvasW / 12)));
+    const fontPx = Math.max(22, Math.min(120, Math.round(base * this.REPLY_FONT_SCALE)));
     // 左右留白 = 屏宽的 8%，限制在 [40, 120]
     const marginX = Math.max(40, Math.min(120, Math.round(canvasW * 0.08)));
     // 行高 = 字号 × 1.4

@@ -80,6 +80,9 @@ function defaultsWithProfile() {
     autoSendSeconds: 2.8, // 停笔多久后自动发送（仅 autoSendEnabled 时生效）
     fadeSeconds: 1.5,     // AI回复淡出的时长
     penOnly: false,       // 防误触：只认笔，忽略手指/手掌触摸
+    toolbarPosition: 'left', // 写字页工具栏摆哪：left(左上竖排，绘画软件那种) | bottom(底部居中，够得着拇指)
+    confirmClearAll: true,   // 一键清空笔迹前弹一下确认。默认开——清空不可逆，误触一次就全没了
+    summarizeOnReset: true,  // 重置对话时先把这轮总结成一张长期记忆卡片，写字页和设置页的重置按钮共用这个
     brush: {
       preset: 'pen',      // pen | ballpoint | marker | brush
       size: 7,

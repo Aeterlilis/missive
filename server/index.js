@@ -197,7 +197,8 @@ function createApp() {
       next.chromeBox = body.chromeBox.toLowerCase();
     }
     if (typeof body.chromeBoxAlpha === 'number' && body.chromeBoxAlpha > 0) {
-      next.chromeBoxAlpha = Math.max(0.1, Math.min(1, body.chromeBoxAlpha));
+      // 下限跟设置页那个滑块的 min 保持一致，不然滑到底的值一保存就被顶回来
+      next.chromeBoxAlpha = Math.max(0.05, Math.min(1, body.chromeBoxAlpha));
     }
     if (typeof body.chromeBorder === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeBorder)) {
       next.chromeBorder = body.chromeBorder.toLowerCase();
@@ -224,6 +225,9 @@ function createApp() {
       next.inkFadeSeconds = Math.max(0.3, Math.min(6, body.inkFadeSeconds));
     }
     if (typeof body.penOnly === 'boolean') next.penOnly = body.penOnly;
+    if (['left', 'bottom'].includes(body.toolbarPosition)) next.toolbarPosition = body.toolbarPosition;
+    if (typeof body.confirmClearAll === 'boolean') next.confirmClearAll = body.confirmClearAll;
+    if (typeof body.summarizeOnReset === 'boolean') next.summarizeOnReset = body.summarizeOnReset;
     if (body.brush && typeof body.brush === 'object') {
       next.brush = { ...s.brush, ...body.brush };
     }

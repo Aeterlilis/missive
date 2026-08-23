@@ -115,7 +115,7 @@ body.theme-black #hint { color: #fff; }
 .icon-btn:active { opacity: 1; }
 .icon-btn:disabled { opacity: 0.2; cursor: default; }
 
-/* 设置 / 历史记录 入口：右上角常驻 */
+/* 重置对话 / 历史记录 / 设置 入口：右上角常驻，从右往左排 */
 #settings-link {
   position: fixed;
   top: 14px;
@@ -130,26 +130,48 @@ body.theme-black #hint { color: #fff; }
   z-index: 6;
 }
 
-/* 写字工具栏：默认竖屏布局——左上角一排横排图标，写字/等待AI回复/AI回复中全程常驻显示，
-   不随状态切换隐藏。横屏时（见下方 @media）切换成左边一竖列。 */
+#btn-reset-context {
+  position: fixed;
+  top: 14px;
+  right: 116px;
+  z-index: 6;
+}
+
+/* 写字工具栏。位置由设置决定（body 上的 toolbar-* class，见 app.js 的 applyToolbarPosition），
+   不再跟着屏幕方向走——横竖屏都听用户的：
+     toolbar-left   左上角一竖列，绘画软件那种摆法，笔刷面板从右侧弹出
+     toolbar-bottom 底部居中一横排，拇指够得着，面板从上方弹出
+   写字/等待AI回复/AI回复中全程常驻显示，不随状态切换隐藏。 */
 #toolbar {
   display: flex;
   position: fixed;
-  top: 14px;
-  left: 12px;
-  flex-direction: row;
   gap: 8px;
   z-index: 6;
   touch-action: manipulation;
 }
 
+body.toolbar-left #toolbar {
+  flex-direction: column;
+  top: 14px;
+  left: 12px;
+}
+
+/* 底部这版铺满整行来居中，容器本身得让开指针事件，否则底部一整条都写不了字 */
+body.toolbar-bottom #toolbar {
+  flex-direction: row;
+  left: 0;
+  right: 0;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  justify-content: center;
+  pointer-events: none;
+}
+body.toolbar-bottom #toolbar > * { pointer-events: auto; }
+
 .hidden { display: none !important; }
 
-/* 笔刷面板：从工具栏的🖊展开，紧挨着工具栏弹出（竖屏在下方，横屏在右侧，见下方 @media） */
+/* 笔刷面板：从工具栏的🖊展开，紧挨着工具栏弹出，方向跟着工具栏位置走（见下方 body.toolbar-*） */
 #brush-panel {
   position: fixed;
-  top: 66px;
-  left: 12px;
   z-index: 6;
   background: var(--box-bg);
   backdrop-filter: var(--box-blur);
@@ -164,10 +186,84 @@ body.theme-black #hint { color: #fff; }
   gap: 8px;
 }
 
-/* 横屏：工具栏改成左边竖列（顺序不变，从上到下），笔刷面板改从右侧弹出 */
-@media (orientation: landscape) {
-  #toolbar { flex-direction: column; }
-  #brush-panel { top: 14px; left: 66px; }
+/* 弹出面板贴着工具栏：左上竖列的从右侧出来，底部横排的从上方出来（居中）。
+   笔刷面板和清空确认共用同一套定位。 */
+body.toolbar-left #brush-panel,
+body.toolbar-left #confirm-clear {
+  top: 14px;
+  left: 66px;
+}
+body.toolbar-bottom #brush-panel,
+body.toolbar-bottom #confirm-clear {
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 短提示：重置对话这类操作画面上看不出变化，用它回执一句话再自己淡掉。
+   固定在顶部居中，避开左上工具栏和右上那三个入口。 */
+#toast {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  padding: 7px 16px;
+  border-radius: 99px;
+  background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  border: 1px solid var(--border-color);
+  border-color: var(--box-border-color);
+  color: var(--ink);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s;
+}
+#toast.fade { opacity: 0; }
+
+/* 清空确认：一句话加两个按钮，样式跟笔刷面板同源 */
+#confirm-clear {
+  position: fixed;
+  z-index: 7;
+  background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  border: 1px solid var(--border-color);
+  border-color: var(--box-border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 14px;
+  max-width: 260px;
+}
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.confirm-actions button {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  border-color: var(--box-border-color);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  opacity: 0.7;
+}
+.confirm-actions button:hover { opacity: 1; }
+/* 真正执行的那个用主题色实心，跟"取消"拉开差别，免得手快点错 */
+#confirm-clear-ok {
+  background: var(--accent, #000);
+  color: var(--accent-contrast, #fff);
+  border-color: transparent;
+  opacity: 0.9;
 }
 .brush-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .brush-presets button {

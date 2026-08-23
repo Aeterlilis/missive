@@ -142,6 +142,13 @@ class App {
     this.ink.undo();
   }
 
+  // 一键清空这一页的笔迹，跟撤销一样只在还没提交时有意义。
+  // 不动导入的背景图——那个有自己的移除按钮，一起清掉会让"清空"这个词变得难预期。
+  clearAllStrokes() {
+    if (this.state !== S.LISTENING) return;
+    this.ink.clearAll();
+  }
+
   // 提交：截 PNG（背景图+笔迹合成）→ 立刻发 AI → 进饮墨
   async _commit() {
     // 快照笔迹（用于饮墨定位），并切换状态，避免重复触发
@@ -674,6 +681,9 @@ async function loadRuntimeConfig() {
     // 玻璃强度：反光/边缘光/模糊/边缘倒影四件事都在 src/glass.js，三个页面共用一份。
     // 边框颜色/透明度是独立的 --border-color（见上面），不归它管。
     applyGlassIntensity(s.glassIntensity);
+    applyToolbarPosition(s.toolbarPosition);
+    CONFIG.CONFIRM_CLEAR_ALL = s.confirmClearAll !== false;
+    CONFIG.SUMMARIZE_ON_RESET = s.summarizeOnReset !== false;
     if (typeof s.speed === 'number') {
       const speed = Math.max(1, Math.min(10, s.speed));
       // speed 1(慢)~10(快) → 每帧间隔 30ms~6ms
@@ -736,12 +746,83 @@ function applyTheme(theme, bgColor) {
   }
 }
 
+// 工具栏摆左上竖列还是底部居中，纯 CSS 的事（见 styles.css 的 body.toolbar-*），
+// 这里只把 class 换上去。以前是跟着屏幕方向自动切的，现在听设置里的。
+function applyToolbarPosition(position) {
+  const bottom = position === 'bottom';
+  document.body.classList.toggle('toolbar-bottom', bottom);
+  document.body.classList.toggle('toolbar-left', !bottom);
+}
+
+// 一句话的短提示，自己淡出。写字页没有状态栏那种地方，重置对话这类
+// "点了之后看不出发生了什么"的操作需要一点回执。
+let toastTimer = 0;
+function toast(text) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('hidden');
+  // 先掉 class 再强制回流，连着点两次也能重新播一遍淡出
+  el.classList.remove('fade');
+  void el.offsetWidth;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.add('fade');
+    setTimeout(() => el.classList.add('hidden'), 400);
+  }, 1600);
+}
+
 // 工具栏 / 导入 / 打字模式的按钮绑定
 function bindToolbar(app) {
   const $ = (id) => document.getElementById(id);
 
   $('btn-undo').addEventListener('click', () => app.undoLastStroke());
   $('btn-send').addEventListener('click', () => app.submitNow());
+
+  // ─── 一键清空：默认先弹确认，设置里可以关掉 ──────────
+  const confirmClear = $('confirm-clear');
+  const btnClearAll = $('btn-clear-all');
+  const closeConfirm = () => confirmClear.classList.add('hidden');
+  btnClearAll.addEventListener('click', () => {
+    if (app.state !== S.LISTENING || app.ink.isEmpty()) return; // 空页面点了也是白点
+    if (CONFIG.CONFIRM_CLEAR_ALL === false) {
+      app.clearAllStrokes();
+      return;
+    }
+    confirmClear.classList.remove('hidden');
+  });
+  $('confirm-clear-cancel').addEventListener('click', closeConfirm);
+  $('confirm-clear-ok').addEventListener('click', () => {
+    closeConfirm();
+    app.clearAllStrokes();
+  });
+  // 点确认框以外的任何地方都算取消，跟笔刷面板一个脾气
+  document.addEventListener('pointerdown', (e) => {
+    if (confirmClear.classList.contains('hidden')) return;
+    if (confirmClear.contains(e.target) || btnClearAll.contains(e.target)) return;
+    closeConfirm();
+  });
+
+  // ─── 重置对话：跟设置页那颗按钮同一个接口 ─────────────
+  // 要不要先总结成长期记忆读设置里的开关（设置页那个复选框现在也存进设置了）。
+  const btnResetContext = $('btn-reset-context');
+  btnResetContext.addEventListener('click', async () => {
+    btnResetContext.disabled = true;
+    try {
+      const res = await fetch('/api/context/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summarize: CONFIG.SUMMARIZE_ON_RESET !== false }),
+      });
+      const out = await res.json();
+      if (!res.ok) throw new Error(out.error || '重置失败');
+      toast(out.memoryCard ? '对话已重置，长期记忆已更新' : '对话已重置，下一页开始是全新的');
+    } catch (err) {
+      toast('重置失败：' + err.message);
+    } finally {
+      btnResetContext.disabled = false;
+    }
+  });
 
   $('btn-import').addEventListener('click', () => $('import-file').click());
   $('import-file').addEventListener('change', async (e) => {

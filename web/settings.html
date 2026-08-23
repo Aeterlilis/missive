@@ -217,6 +217,13 @@
           <button type="button" class="option-pill" data-value="custom">自定义</button>
         </div>
 
+        <h3 style="margin-top:16px">工具栏位置</h3>
+        <p class="hint">写字页那排图标摆哪。左上竖排是绘画软件的习惯；底部居中在手机上拇指更够得着。</p>
+        <div class="option-pills" data-group="toolbarPosition">
+          <button type="button" class="option-pill" data-value="left">左上竖排</button>
+          <button type="button" class="option-pill" data-value="bottom">底部居中</button>
+        </div>
+
         <h3 style="margin-top:16px">玻璃强度</h3>
         <p class="hint" id="glass-intensity-hint">标准是普通毛玻璃；"更透亮"更清透，支持的设备上还会有轻微的折射扭曲。</p>
         <div class="option-pills" data-group="glassIntensity">
@@ -359,6 +366,13 @@
           <span class="switch"><input type="checkbox" id="penOnly" /><span class="switch-track"><span class="switch-thumb"></span></span></span>
         </label>
         <p class="hint"></p>
+
+        <h3 style="margin-top:16px">清空前确认</h3>
+        <label class="switch-row">
+          <span>点"清空这一页"时先问一下</span>
+          <span class="switch"><input type="checkbox" id="confirmClearAll" checked /><span class="switch-track"><span class="switch-thumb"></span></span></span>
+        </label>
+        <p class="hint">清空是一次性的，撤销救不回来。关掉之后点一下就直接清。</p>
 
         <h3 style="margin-top:20px">发送方式</h3>
         <label class="switch-row">

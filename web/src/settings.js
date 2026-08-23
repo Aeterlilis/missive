@@ -942,6 +942,9 @@ async function load() {
     glassPills.setActive(glassIntensity);
     applyGlassIntensity(glassIntensity);
 
+    // 只有写字页会用到，设置页没有那排工具栏可预览，所以只回填选中态
+    toolbarPills.setActive(data.toolbarPosition || 'left');
+
     cjkFontPills.setActive(data.cjkFont || 'default');
     $('cjkFontCustomPill').textContent = data.hasCjkFont ? (data.cjkFontName || '自定义字体') : '上传字体文件';
 
@@ -966,6 +969,8 @@ async function load() {
     setRangeValue('inkLingerSeconds', data.inkLingerSeconds ?? 2);
     setRangeValue('inkFadeSeconds', data.inkFadeSeconds ?? 0.9);
     $('penOnly').checked = !!data.penOnly;
+    $('confirmClearAll').checked = data.confirmClearAll !== false;
+    $('summarizeOnReset').checked = data.summarizeOnReset !== false;
   } catch (e) {
     setStatus('读取设置失败: ' + e.message, true);
   }
@@ -1109,6 +1114,9 @@ async function saveAll() {
         inkLingerSeconds: parseFloat($('inkLingerSeconds').value) || 2,
         inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
         penOnly: $('penOnly').checked,
+        toolbarPosition: toolbarPills.getActive() || 'left',
+        confirmClearAll: $('confirmClearAll').checked,
+        summarizeOnReset: $('summarizeOnReset').checked,
         activeProfileId: currentProfileId,
       }),
     });
@@ -1204,6 +1212,7 @@ const chromeThemePills = setupOptionPills('chromeTheme', (value) => {
   setRangeValue('chromeBorderAlpha', p.borderAlpha);
 }); // 点了就实时预览
 const glassPills = setupOptionPills('glassIntensity', applyGlassIntensity); // 点了就实时预览
+const toolbarPills = setupOptionPills('toolbarPosition'); // 只影响写字页，这边没得预览
 
 // 自绘滑块：跟写字页 app.js 里同一份逻辑，见 range-slider.css 顶部注释。这里的滑块
 // （时长/透明度）都是页面自带的静态 <input>，不是动态生成的，直接在启动时挂一遍就行。

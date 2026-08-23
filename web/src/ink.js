@@ -235,6 +235,13 @@ export class InkLayer {
     this.currentStroke = [];
   }
 
+  // 清空所有笔画并把画布也擦干净。跟 clear() 的区别只在于立刻重绘一次——
+  // clear() 那个用在饮墨动画收尾处，那里每帧本来就在重画，不需要额外擦。
+  clearAll() {
+    this.clear();
+    this._redrawAll();
+  }
+
   // 撤销最后一笔：写字写错很常见，撤销比整页清空更常用
   undo() {
     if (this.strokes.length === 0) return false;

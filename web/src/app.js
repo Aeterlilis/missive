@@ -2,6 +2,7 @@
 //
 // 状态流转（移植自 riddle 的 main.rs State）：
 //   LISTENING  → 提交（停笔超时）→ DRINKING
+//   LISTENING  → 打字提交 → WRITING（这段话浮现在纸上）→ DRINKING
 //   DRINKING   → 饮墨动画跑完 → THINKING（若 AI 已首字则直接 REPLYING）
 //   THINKING   → AI 首句到达 → REPLYING
 //   REPLYING   → 全部写完且流结束 → LINGERING
@@ -20,6 +21,8 @@ import { clearRegion } from './dissolve.js';
 
 const S = {
   LISTENING: 'LISTENING',
+  // 打字提交后，把这段话一笔笔写到纸上的阶段（手写提交不经过这里，纸上本来就有字了）
+  WRITING: 'WRITING',
   DRINKING: 'DRINKING',
   THINKING: 'THINKING',
   REPLYING: 'REPLYING',
@@ -54,6 +57,10 @@ class App {
     this._pageChars = 0;          // 当前这一页写了多少字（停留时长按它算）
     this._pageTurnPending = false; // 这一页写满了、还有下一页要写
     this._pageTurnWaiters = [];    // 等着翻页完成再继续写的 _writeToPaper
+    this._writingState = S.REPLYING; // 现在纸上在写的是谁的字：REPLYING=AI，WRITING=用户打的
+    this._userInkBBox = null;      // 打字提交的那段字在纸上的范围，饮墨要用
+    this._userTextDone = null;     // 用户那段字写完+被吸干净之前，挡住 AI 回复别插进来
+    this._releaseUserText = null;
     this.replyBox = null;
 
     this._setupCanvas();
@@ -107,6 +114,7 @@ class App {
     try {
       switch (this.state) {
         case S.LISTENING: this._tickListening(now); break;
+        case S.WRITING: this._tickWriting(now); break;
         case S.DRINKING: this._tickDrinking(now); break;
         case S.THINKING: this._tickThinking(now); break;
         case S.REPLYING: this._tickReplying(now); break;
@@ -219,19 +227,51 @@ class App {
 
   // ─── 打字模式：没有画布内容可淡，直接进"思考中" ──────
   async submitTyped(text) {
-    if (this.state !== S.LISTENING || !text.trim()) return;
+    const content = text.trim();
+    if (this.state !== S.LISTENING || !content) return;
     this.hint?.classList.add('fade');
-    this.state = S.THINKING;
-    this.phaseStart = performance.now();
     this.firstSentenceArrived = false;
     this._gotContent = false;
     this._streamDone = false;
     this._oracleFailed = false;
-    this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
-    this._startOracleFromText(text.trim()).catch((e) => {
+
+    // 请求立刻发出去，不等写字动画——写字加饮墨这几秒正好盖住首字延迟，
+    // 跟手写那条路径同一个道理（见文件头"关键巧思"）
+    this._startOracleFromText(content).catch((e) => {
       console.error('AI 请求失败', e);
       this._oracleFailed = true;
     });
+
+    // 先把这段话写到纸上。AI 的回复也归 scribe 管，所以得挡住它别在这时候插进来
+    // 一起写——_consumeOracle 会等 _userTextDone 这个闸（见那边）。
+    this._userTextDone = new Promise((resolve) => { this._releaseUserText = resolve; });
+    this.state = S.WRITING;
+    this._writingState = S.WRITING; // 这段话要是长到翻页，翻完页回到的是这个状态
+    this.phaseStart = performance.now();
+    this.scribe.reset();
+    this._pageChars = 0;
+    this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
+    await this._writeToPaper(content);
+  }
+
+  // ─── WRITING：把打字的内容一笔笔写到纸上 ─────────────
+  // 用的是 AI 回复那套手写动画（同一个 scribe、同一个墨色 CONFIG.INK_COLOR），
+  // 所以打出来的字跟手写的看起来是一种东西。写完交给饮墨，跟手写提交后一样被纸吸掉。
+  _tickWriting(now) {
+    if (!this._lastScribeStepAt || now - this._lastScribeStepAt >= CONFIG.SCRIBE_FRAME_MS) {
+      this.scribe.step();
+      this._lastScribeStepAt = now;
+    }
+    if (!this.scribe.done || this._pulling) return;
+    // 这一页写满、后面还有 → 走停留+饮墨再翻页，跟回复长了是一样的处理
+    if (this._pageTurnPending) { this._enterLingering(now); return; }
+    // 全部写完 → 交给饮墨。饮墨那边靠 _userInkBBox 知道该吸哪块
+    // （这时候纸上的字是 scribe 画的，不是笔迹，strokesBBox 找不到东西）
+    this._userInkBBox = this.scribe.replyBBox();
+    this.scribe.reset();
+    this._writingState = S.REPLYING; // 交还给 AI 回复
+    this.state = S.DRINKING;
+    this.phaseStart = now;
   }
 
   // ─── 把一段文字写到纸上，一页写不下就翻页续写 ──────────────
@@ -278,7 +318,8 @@ class App {
     this.replyBox = null;
     this._pageChars = 0;
     this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
-    this.state = S.REPLYING;
+    // 翻页前在写什么就回到什么状态：AI 回复回 REPLYING，打字提交那段字回 WRITING
+    this.state = this._writingState;
     this._releasePageTurn();
   }
 
@@ -297,6 +338,9 @@ class App {
         const { value, done } = await iter.next();
         if (done) break;
         if (value) {
+          // 打字提交的话，用户那段字正在纸上浮现，scribe 被占着——等它写完并被
+          // 饮墨吸干净再往里灌，否则两段字会挤进同一个待写队列一起写出来
+          if (this._userTextDone) await this._userTextDone;
           // 首句到达：从 THINKING 切到 REPLYING
           if (!this._gotContent) {
             this._gotContent = true;
@@ -361,7 +405,9 @@ class App {
     // 先原样停留一段时间（跟 AI 回复的 LINGERING 对称），别一提交就立刻开始淡出
     if (now - this.phaseStart < CONFIG.DRINK_LINGER_MS) return;
     if (!this._drinkSnapshot) {
-      const bbox = this.hasBgImage ? this._bgRect : (() => {
+      // 打字提交那条路径纸上的字是 scribe 画的，没有笔迹可算范围，进 DRINKING 之前
+      // 已经把范围存在 _userInkBBox 里了（见 _tickWriting）
+      const bbox = this._userInkBBox || (this.hasBgImage ? this._bgRect : (() => {
         const raw = strokesBBox(this.turnStrokes);
         const pad = Math.ceil(CONFIG.BRUSH_SIZE / 2) + 1;
         return {
@@ -370,7 +416,7 @@ class App {
           maxX: Math.min(this.canvas.width, raw.maxX + pad),
           maxY: Math.min(this.canvas.height, raw.maxY + pad),
         };
-      })();
+      })());
       this._drinkBBox = bbox;
       this._drinkSnapshot = this.ctx.getImageData(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
       this._drinkBgSnapshot = this.hasBgImage
@@ -403,6 +449,11 @@ class App {
     this.phaseStart = now;
     this.scribe.reset();
     this._pageChars = 0;
+    this._userInkBBox = null;
+    // 纸干净了，scribe 空出来了 → 放行 AI 回复（打字提交那条路径一直等在这）
+    this._releaseUserText?.();
+    this._userTextDone = null;
+    this._releaseUserText = null;
     this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
     // 饮墨跑完后才决定下一步，避免 AI 失败兜底抢占动画
     if (this._oracleFailed) {
@@ -548,6 +599,12 @@ class App {
     // scribe 已经 reset，多余的循环写不出东西
     this._pageTurnPending = false;
     this._releasePageTurn();
+    this._writingState = S.REPLYING;
+    this._userInkBBox = null;
+    // 这一轮结束了，别把等在闸门上的 _consumeOracle 挂死
+    this._releaseUserText?.();
+    this._userTextDone = null;
+    this._releaseUserText = null;
     this.scribe.reset();
     this.replyBox = null;
     this._drinkSnapshot = null;
@@ -1219,7 +1276,7 @@ function bindToolbar(app) {
 
   syncBrushUI(); // 笔刷 + 颜色 UI 依赖的 DOM 引用都齐了，这里统一做一次初始同步
 
-  const overlay = $('type-overlay');
+  const overlay = $('type-box');
   const input = $('type-input');
   const openTyping = () => {
     if (app.state !== S.LISTENING) return;

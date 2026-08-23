@@ -97,12 +97,13 @@
     </div>
   </div>
 
-  <!-- 打字模式覆盖层 -->
-  <div id="type-overlay" class="hidden">
-    <textarea id="type-input" placeholder="打字代替写字…"></textarea>
+  <!-- 行内打字框：就摆在正文将来浮现的那块位置上，点确定之后这段字会在原地
+       一笔笔写出来，再被纸吸掉，然后才轮到 AI 回复（见 app.js 的 submitTyped）。 -->
+  <div id="type-box" class="hidden">
+    <textarea id="type-input" rows="3" placeholder="打字代替写字…"></textarea>
     <div class="type-actions">
       <button type="button" id="type-cancel">返回写字</button>
-      <button type="button" id="type-send">✓ 发送</button>
+      <button type="button" id="type-send">确定</button>
     </div>
   </div>
 
@@ -193,6 +194,6 @@
   </style>
 
   <!-- 模块以 ESM 加载，app.js 是主入口。?v= 强制刷新缓存 -->
-  <script type="module" src="src/app.js?v=14"></script>
+  <script type="module" src="src/app.js?v=15"></script>
 </body>
 </html>

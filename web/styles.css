@@ -302,29 +302,35 @@ body.toolbar-bottom #confirm-clear {
 
 /* 颜色预设 + 自定义色轮的样式在 color-picker.css 里（跟设置页的选色盘共用一份） */
 
-/* 打字模式覆盖层 */
-#type-overlay {
+/* 行内打字框。位置刻意跟 CONFIG.layout 算出来的正文区域对齐——上边距是画布高的
+   1/6、左右各留 8%，跟 startY / marginX 是同一组比例。所以点确定之后，字就在框
+   刚才待的那个地方长出来，而不是跳到别处，衔接上感觉是"这段话落到纸上了"。
+   不铺满全屏：纸面本身还看得见，才像在纸上写而不是跳去了另一个页面。 */
+#type-box {
   position: fixed;
-  inset: 0;
-  z-index: 8;
+  top: 16.6%;
+  left: 8%;
+  right: 8%;
+  z-index: 7;
   display: flex;
   flex-direction: column;
-  padding: 60px 8vw 24px;
-  background: inherit; /* 跟纸张主题一致，不额外加背景色 */
+  gap: 10px;
 }
-#type-overlay.hidden { display: none; }
+#type-box.hidden { display: none; }
 
 #type-input {
-  flex: 1;
   width: 100%;
   border: none;
+  border-bottom: 1px solid var(--border-color);
+  border-color: var(--box-border-color);
   background: transparent;
   resize: none;
-  font-size: 28px;
-  font-family: "LXGW WenKai", serif;
+  font-size: 26px;
+  font-family: var(--hint-font, "LXGW WenKai"), serif;
   color: var(--ink);
   outline: none;
-  line-height: 1.6;
+  line-height: 1.7;
+  padding: 0 2px 8px;
 }
 
 .type-actions {

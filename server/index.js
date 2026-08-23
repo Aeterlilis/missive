@@ -65,6 +65,9 @@ function createApp() {
       inkLingerSeconds: s.inkLingerSeconds,
       inkFadeSeconds: s.inkFadeSeconds,
       penOnly: s.penOnly,
+      toolbarPosition: s.toolbarPosition,
+      confirmClearAll: s.confirmClearAll,
+      summarizeOnReset: s.summarizeOnReset,
       brush: s.brush,
     });
   });

@@ -69,7 +69,7 @@ function defaultsWithProfile() {
     chromeBoxAlpha: 0.55,   // 界面配色：底色透明度
     chromeBorder: '#000000',   // 界面配色：边框颜色，跟文字颜色分开算
     chromeBorderAlpha: 1,       // 界面配色：边框透明度
-    glassIntensity: 'standard', // standard(标准毛玻璃) | enhanced(更透亮，边缘高光+支持的话有折射扭曲)
+    glassIntensity: 'standard', // standard(标准毛玻璃) | enhanced(更透亮：反光+两侧边缘光+支持的话有边缘倒影，见 web/src/glass.js)
     cjkFont: 'default', // default(霞鹜文楷) | liujian(草书连笔) | zhimang(行书体) | notoserif(宋体) | chunfeng(春风楷书) | custom(自己传的字体)
     cjkFontExt: null,    // 存的自定义字体文件后缀（ttf/otf/ttc），没传过就是 null
     cjkFontName: '',     // 自定义字体的原始文件名，UI 显示用

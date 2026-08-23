@@ -11,6 +11,7 @@
 // 关键巧思：提交时立刻发起 AI 请求，饮墨动画的 ~1s 正好掩盖首字延迟。
 
 import { CONFIG, BRUSH_PRESETS } from './config.js';
+import { applyGlassIntensity } from './glass.js';
 import { InkLayer } from './ink.js';
 import { strokesToPngBlob, canvasToBlob, postInterpret, postInterpretText } from './capture.js';
 import { OracleStream } from './oracle.js';
@@ -670,18 +671,9 @@ async function loadRuntimeConfig() {
       root.setProperty('--box-solid', boxHex);
       root.setProperty('--border-color', `rgba(${bdr}, ${bdg}, ${bdb}, ${borderAlpha})`);
     }
-    // 玻璃强度："更透亮"换成更轻的模糊+更高饱和度+外阴影+边缘高光/暗角，逻辑跟设置页
-    // applyGlassIntensity 一样（边框颜色/透明度是独立的 --border-color，见上面，这里不用管）。
-    // 折射扭曲强度桌面鼠标端和触屏端观感差很多，用 pointer:coarse 粗分一下，桌面给弱得多的 scale。
-    if (s.glassIntensity === 'enhanced') {
-      let supportsDistortion = false;
-      try { supportsDistortion = CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch {}
-      const root = document.documentElement.style;
-      root.setProperty('--box-blur', `${supportsDistortion ? 'url(#glass-distortion) ' : ''}blur(6px) saturate(1.35)`);
-      root.setProperty('--box-rim', '0 3px 12px rgba(0,0,0,.12), 0 2px 8px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)');
-      const dispMap = document.querySelector('#glass-distortion feDisplacementMap');
-      if (dispMap) dispMap.setAttribute('scale', window.matchMedia('(pointer: coarse)').matches ? '35' : '14');
-    }
+    // 玻璃强度：反光/边缘光/模糊/边缘倒影四件事都在 src/glass.js，三个页面共用一份。
+    // 边框颜色/透明度是独立的 --border-color（见上面），不归它管。
+    applyGlassIntensity(s.glassIntensity);
     if (typeof s.speed === 'number') {
       const speed = Math.max(1, Math.min(10, s.speed));
       // speed 1(慢)~10(快) → 每帧间隔 30ms~6ms

@@ -1,6 +1,8 @@
 // settings.js —— 设置页逻辑：多配置槽位的读写 + 拉取模型列表 + 全局设置。
 // v2：卡片化——API配置/人设/记忆都是"堆叠→点开→点进单张编辑"的卡片，系统提示词是平铺开关列表。
 
+import { applyGlassIntensity } from './glass.js';
+
 const form = document.getElementById('form');
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
@@ -202,45 +204,6 @@ function applyBorderColor(hex, alpha) {
 
 function syncChromeCustomVisibility(mode) {
   $('chrome-theme-custom').classList.toggle('hidden', mode !== 'custom');
-}
-
-// 折射扭曲（url(#glass-distortion)）不是所有浏览器都支持，先探测一下，
-// 不支持就退回纯模糊——不然直接把 url() 塞进 backdrop-filter，在不认识它的浏览器上
-// 整条 backdrop-filter 会连模糊都一起失效，比啥都没有还难看。
-const GLASS_DISTORTION_SUPPORTED = (() => {
-  try { return CSS.supports('backdrop-filter', 'url(#glass-distortion) blur(1px)'); } catch { return false; }
-})();
-
-// 折射扭曲的强度在鼠标驱动的桌面端和触屏端渲染出来的观感差很多（同一个 scale 桌面端会糊成
-// 波浪，触屏端却刚刚好）——用 pointer:coarse 粗略分个类，桌面（细指针/鼠标）给一个弱得多的值。
-function tuneDistortionScale() {
-  const map = document.querySelector('#glass-distortion feDisplacementMap');
-  if (!map) return;
-  const coarse = window.matchMedia('(pointer: coarse)').matches;
-  map.setAttribute('scale', coarse ? '35' : '14');
-}
-
-// PS 那套"斜面浮雕+内阴影+内发光+叠光泽+投影"图层样式的 CSS 翻译，几层 box-shadow 叠起来：
-// 外层投影负责浮起来的感觉；两道极窄的内嵌高光/暗角是斜面的硬边转折（贴着轮廓，不模糊）；
-// 内发光是不分方向、整圈都有的一层亮，对应"整个轮廓都透光，背光面也会反光"；内阴影用更大的
-// 模糊半径往里推，让暗部落在偏中间的位置而不是死贴着边——这样才不会看起来像一整块实心凸起的
-// 塑料，而是有光线穿过的曲面。
-const GLASS_RIM = '0 3px 12px rgba(0,0,0,.12), 0 2px 8px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.12), inset 0 0 8px rgba(255,255,255,.28), inset 0 -5px 14px rgba(0,0,0,.07)';
-
-// 玻璃强度："标准"就是 chrome-theme.css 里定义的默认值；"更透亮"把模糊调轻、饱和度调高，
-// 边框淡到几乎看不见、换 GLASS_RIM 那一叠阴影/高光表达轮廓，支持的话再叠一层真正的折射扭曲，
-// 几样加起来才是用户说的"不是随便糊了个模糊"的液态玻璃感。
-function applyGlassIntensity(mode) {
-  const root = document.documentElement.style;
-  if (mode === 'enhanced') {
-    const distortion = GLASS_DISTORTION_SUPPORTED ? 'url(#glass-distortion) ' : '';
-    root.setProperty('--box-blur', `${distortion}blur(6px) saturate(1.35)`);
-    root.setProperty('--box-rim', GLASS_RIM);
-    tuneDistortionScale();
-  } else {
-    root.setProperty('--box-blur', 'blur(16px) saturate(1.6)');
-    root.setProperty('--box-rim', 'none');
-  }
 }
 
 // 通用 HSB方形/色环 选色盘——主题色跟纸张纯色背景共用同一份实现，靠 ids/presetsSelector 挂到不同的 DOM 上。

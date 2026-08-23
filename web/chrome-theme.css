@@ -17,15 +17,21 @@
      底色透明度就连遮罩浓淡也跟着变，见 settings.js 的 applyChromeTheme。 */
   --veil-bg: rgba(255, 255, 255, 0.12);
   /* 毛玻璃：模糊+提高饱和度，垫在半透明底色下面的纸张纹理透出来的时候不再是纯色块，
-     而是糊成一片有质感的背景色——苹果那套"液态玻璃"的核心就是这个。写字页/设置页/
-     历史页三处的 var(--box-bg) 都配了这个（普通手机/平板/电脑屏幕，不是墨水屏，不用
-     顾虑模糊特效的兼容性）。
-     --box-rim 是"更透亮"档才会有的边缘高光/暗角（inset box-shadow），标准档是 none。
-     "更透亮"档同时会把 --box-blur 换成更轻的模糊+更高饱和度，浏览器支持的话还会在最前面
-     叠一层 url(#glass-distortion)（见各 HTML 里的隐藏 <svg><filter>）做真正的折射扭曲——
-     具体逻辑和"支持就用，不支持就退回普通模糊"的判断在 settings.js 的 applyGlassIntensity。 */
+     而是糊成一片有质感的背景色。写字页/设置页/历史页三处的 var(--box-bg) 都配了这个
+     （普通手机/平板/电脑屏幕，不是墨水屏，不用顾虑模糊特效的兼容性）。
+     这里全是"标准"档的值，也就是没读到设置前的样子。"更透亮"档把它们整套换掉，
+     还会多出一个逐元素的边缘倒影——四样东西各是什么、为什么这么调，见 src/glass.js。 */
   --box-blur: blur(16px) saturate(1.6);
+  /* 边缘高光/暗角（inset box-shadow） */
   --box-rim: none;
+  /* 玻璃表面的反光，叠在 --box-bg 上面的几层渐变（规则在 glass.css） */
+  --box-sheen: none;
+  /* 贴着轮廓那一圈高饱和亮边的宽度和滤镜（规则同在 glass.css）。
+     mask 的 135° 渐变让这圈在左上/右下最亮、中间淡下去，跟 --box-rim 的光源方向一致，
+     两档共用同一条，所以放在这儿而不是跟着档位换。 */
+  --box-band-w: 0px;
+  --box-band-filter: none;
+  --box-band-mask: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.32) 50%, #fff);
   /* 玻璃元素的边框颜色（history.css/settings.css/color-picker.css 里那些 border-color 声明用的
      是这个，不是直接用 --border-color）。曾经在"更透亮"档会自动淡化，现在边框透明度完全交给
      用户自己在设置页调（见 applyBorderColor），这里就是原样等于 --border-color，留这层间接

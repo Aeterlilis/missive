@@ -1,0 +1,65 @@
+/* 玻璃元素的两条"整体"规则：边缘倒影和贴边亮圈。四件事的说明和参数都在 src/glass.js，
+   这里只放没法用变量塞进现有声明里的那部分。
+
+   名单跟 glass.js 的 GLASS_SELECTOR 是同一份，两边要一起改。
+
+   这个文件在三个 HTML 里都排在最后一个 <link>：下面第一条要盖掉 styles.css /
+   settings.css / history.css / color-picker.css 里各自那句
+   backdrop-filter: var(--box-blur)，选择器权重一样，只能靠出现得晚取胜。 */
+
+.icon-btn,
+#brush-panel,
+.brush-presets button,
+.type-actions button,
+header,
+#settings-nav,
+.secondary,
+.option-pill,
+.add-btn,
+.card,
+.conv-card,
+.color-mode-tab {
+  /* --box-lens 是那块玻璃自己那张位移贴图的滤镜，由 glass.js 按元素尺寸/圆角逐个写成
+     内联变量（尺寸不同贴图就不同，没法共用一个）。标准档、以及不支持在 backdrop-filter
+     里引用 SVG 滤镜的浏览器上它是空的，这里就只剩 var(--box-blur)，跟以前完全一样。 */
+  backdrop-filter: var(--box-lens, ) var(--box-blur);
+  -webkit-backdrop-filter: var(--box-lens, ) var(--box-blur);
+  /* 表面反光。底色仍然是各自声明里的 background: var(--box-bg)，这里只补上面那两层
+     渐变；标准档 --box-sheen 是 none，等于没写。 */
+  background-image: var(--box-sheen);
+}
+
+/* 贴着轮廓的一圈高饱和亮边：单独再采一次背景做提饱和+提亮，mask 把这层只留在边上那一条。
+   两层 mask 相减（padding-box 的那层挖掉中间）就只剩下 border 宽度的一圈；mask 自己带的
+   135° 渐变让这圈在左上和右下最亮、中间淡下去，跟 --box-rim 的光源方向对上。
+
+   inset:0 不需要父元素额外写 position:relative——玻璃元素的 backdrop-filter 不是 none，
+   本身就已经是绝对定位子元素的包含块了（header/#settings-nav 是 fixed 的，真加
+   position:relative 反而会把它们打回文档流）。
+   z-index:-1 让这圈压在玻璃底色之上、图标和文字之下。 */
+.icon-btn::after,
+#brush-panel::after,
+.brush-presets button::after,
+.type-actions button::after,
+header::after,
+#settings-nav::after,
+.secondary::after,
+.option-pill::after,
+.add-btn::after,
+.card::after,
+.conv-card::after,
+.color-mode-tab::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  border: var(--box-band-w) solid transparent;
+  backdrop-filter: var(--box-band-filter);
+  -webkit-backdrop-filter: var(--box-band-filter);
+  -webkit-mask: var(--box-band-mask) padding-box, var(--box-band-mask);
+  -webkit-mask-composite: xor;
+  mask: var(--box-band-mask) padding-box, var(--box-band-mask);
+  mask-composite: exclude;
+  pointer-events: none;
+}

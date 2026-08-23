@@ -1278,12 +1278,43 @@ function bindToolbar(app) {
 
   const overlay = $('type-box');
   const input = $('type-input');
+
+  // 让框里的字跟等会儿浮现在纸上的字尺寸、字体都一致——框本来就摆在正文位置上，
+  // 大小再对上，点确定之后才是"这段话落到纸上了"，而不是换了个东西重新出现一遍。
+  // 画布是按设备像素分辨率放大的，CONFIG.layout 算出来的也是设备像素，得除以这个
+  // 放大倍数才是 CSS 像素。字号可调（见设置里的回复字号），所以每次打开都重算。
+  const syncTypeBoxFont = () => {
+    const L = CONFIG.layout(app.canvas.width, app.canvas.height);
+    const ratio = app.canvas.width / (app.canvas.clientWidth || app.canvas.width);
+    input.style.fontSize = (L.fontPx / ratio).toFixed(1) + 'px';
+    input.style.lineHeight = (L.lineHeight / ratio).toFixed(1) + 'px';
+    // 中英文用的不是同一套字体，跟 scribe 的判断保持一致，边打边跟着换
+    input.style.fontFamily = `"${pickFontFamily(input.value)}", serif`;
+  };
+
+  // 输入框高度跟着内容长，下划线始终贴着最后一行——固定行数的话短句下面会空一大截，
+  // 字号又是按正文来的（很大），那截空白很显眼
+  const autoGrowInput = () => {
+    input.style.height = 'auto';
+    input.style.height = input.scrollHeight + 'px';
+  };
+
   const openTyping = () => {
     if (app.state !== S.LISTENING) return;
     overlay.classList.remove('hidden');
     input.value = '';
+    syncTypeBoxFont();
+    autoGrowInput();
+    app.hint?.classList.add('fade'); // 首屏提示语让位，不然跟输入框叠在一起
     input.focus();
   };
+  input.addEventListener('input', () => {
+    input.style.fontFamily = `"${pickFontFamily(input.value)}", serif`;
+    autoGrowInput();
+  });
+  window.addEventListener('resize', () => {
+    if (!overlay.classList.contains('hidden')) syncTypeBoxFont();
+  });
   const closeTyping = () => overlay.classList.add('hidden');
   const sendTyped = async () => {
     const text = input.value.trim();

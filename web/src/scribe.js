@@ -214,6 +214,11 @@ function hasCjk(text) {
 
 // ─── 文本换行 ───────────────────────────────────────────────
 // 按可见宽度把长文本拆成多行。中文按字、英文按词。
+// 避头尾：中文排版里标点不能出现在行首（NO_LINE_START），左括号左引号不能留在行末
+// （NO_LINE_END）。中英文标点都列上——用户打字用哪套输入法都有可能。
+const NO_LINE_START = '，。、；：？！）】》」』〕〉…—·%,.;:?!)]}”’';
+const NO_LINE_END = '（【《「『〔〈([{“‘';
+
 function wrapText(ctx, text, px, maxWidth, fontFamily) {
   ctx.font = `${px}px "${fontFamily}", serif`;
   const lines = [];
@@ -231,8 +236,21 @@ function wrapText(ctx, text, px, maxWidth, fontFamily) {
     for (const tok of tokens) {
       const w = ctx.measureText(tok).width;
       if (currentWidth + w > maxWidth && current) {
+        // 行首禁则：逗号句号这些不能出现在行首，让它吊在上一行末尾（宁可稍微出界）。
+        // 只让一个字符的宽度出界，连着好几个标点的话后面的照常换行，免得越吊越长。
+        if (tok.length === 1 && NO_LINE_START.includes(tok) && currentWidth + w <= maxWidth + px * 1.1) {
+          current += tok;
+          currentWidth += w;
+          continue;
+        }
+        // 行尾禁则：左括号左引号不该留在行末，把它撤下来跟着下一行一起走
+        let carry = '';
+        if (current.length > 1 && NO_LINE_END.includes(current[current.length - 1])) {
+          carry = current[current.length - 1];
+          current = current.slice(0, -1);
+        }
         lines.push(commitLine(ctx, current, px));
-        current = tok.replace(/^\s+/, '');
+        current = (carry + tok).replace(/^\s+/, '');
         currentWidth = ctx.measureText(current).width;
       } else {
         current += tok;

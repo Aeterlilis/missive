@@ -325,11 +325,13 @@ body.toolbar-bottom #confirm-clear {
   border-color: var(--box-border-color);
   background: transparent;
   resize: none;
+  /* 字号/行高/字体由 app.js 的 syncTypeBoxFont 按 CONFIG.layout 算出来内联覆盖，
+     跟浮现在纸上的字对齐。这里只是它还没跑起来时的兜底。 */
   font-size: 26px;
-  font-family: var(--hint-font, "LXGW WenKai"), serif;
+  font-family: "LXGW WenKai", serif;
+  line-height: 1.4;
   color: var(--ink);
   outline: none;
-  line-height: 1.7;
   padding: 0 2px 8px;
 }
 

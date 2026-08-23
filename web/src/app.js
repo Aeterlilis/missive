@@ -842,7 +842,13 @@ function bindToolbar(app) {
   const sizePicker = $('brush-size-picker');
 
   const btnBrush = $('btn-brush');
-  btnBrush.addEventListener('click', () => brushPanel.classList.toggle('hidden'));
+  btnBrush.addEventListener('click', () => {
+    const opening = brushPanel.classList.contains('hidden');
+    brushPanel.classList.toggle('hidden');
+    // 面板收起时宽度是 0，自绘滑块的手柄位置是按这个 0 宽算出来的，展开后不重算的话
+    // 手柄会一直贴在最左边、跟实际粗细对不上。syncBrushUI 里那次 input 事件负责重算。
+    if (opening) syncBrushUI();
+  });
 
   // 点面板以外的任何地方（包括画布）就收起来，不然只能靠再点一次🖊关掉，容易一直挡着
   document.addEventListener('pointerdown', (e) => {

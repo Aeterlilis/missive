@@ -287,8 +287,18 @@ body.toolbar-bottom #confirm-clear {
   background: color-mix(in srgb, var(--accent, #000) 85%, transparent);
   color: var(--accent-contrast, #fff);
 }
-.brush-controls { display: flex; align-items: center; gap: 10px; }
-/* .mslider（自绘轨道+手柄的包装元素）本身自带 flex:1，见 range-slider.css */
+/* 颜色一行、粗细滑块单独一行铺满。以前两者并排，滑块吃 flex:1 但被色块挤到只剩
+   手柄那么宽，看起来像色块后面多长了一个圆点。
+   .mslider（自绘轨道+手柄的包装元素）本身自带 flex:1，见 range-slider.css。 */
+.brush-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+/* .mslider 自带的 flex:1 是给横排写的（撑满剩余宽度）。这里改成竖排之后主轴变成纵向，
+   flex-basis:0 就落到高度上，把滑块压成 0 高——宽度由 align-items:stretch 管，高度还给它。 */
+.brush-controls .mslider { flex: none; }
 
 /* 颜色预设 + 自定义色轮的样式在 color-picker.css 里（跟设置页的选色盘共用一份） */
 

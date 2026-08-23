@@ -24,6 +24,12 @@
   --box-blur: blur(16px) saturate(1.6);
   /* 边缘高光/暗角（inset box-shadow） */
   --box-rim: none;
+  /* 边缘倒影的滤镜，"更透亮"档由 glass.js 按元素逐个写成内联变量，这里是"没有"。
+     值是空的（不是 none）——它拼在 backdrop-filter 里当前缀用，写 none 会让整条失效。
+     必须在这儿声明出来：glass.css 里是 var(--box-lens) 而不是 var(--box-lens, )，
+     后者那种空 fallback 的写法 Safari 会判成非法，一路把 backdrop-filter 整条丢掉，
+     连模糊都不剩。 */
+  --box-lens: ;
   /* 玻璃表面的反光，叠在 --box-bg 上面的几层渐变（规则在 glass.css） */
   --box-sheen: none;
   /* 贴着轮廓那一圈高饱和亮边的宽度和滤镜（规则同在 glass.css）。

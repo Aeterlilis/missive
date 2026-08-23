@@ -21,9 +21,11 @@ header,
 .color-mode-tab {
   /* --box-lens 是那块玻璃自己那张位移贴图的滤镜，由 glass.js 按元素尺寸/圆角逐个写成
      内联变量（尺寸不同贴图就不同，没法共用一个）。标准档、以及不支持在 backdrop-filter
-     里引用 SVG 滤镜的浏览器上它是空的，这里就只剩 var(--box-blur)，跟以前完全一样。 */
-  backdrop-filter: var(--box-lens, ) var(--box-blur);
-  -webkit-backdrop-filter: var(--box-lens, ) var(--box-blur);
+     里引用 SVG 滤镜的浏览器上它是空的，这里就只剩 var(--box-blur)，跟以前完全一样。
+     空值来自 chrome-theme.css 里的 --box-lens 声明，不写成 var(--box-lens, ) 的原因
+     见那边的注释。 */
+  backdrop-filter: var(--box-lens) var(--box-blur);
+  -webkit-backdrop-filter: var(--box-lens) var(--box-blur);
   /* 表面反光。底色仍然是各自声明里的 background: var(--box-bg)，这里只补上面那两层
      渐变；标准档 --box-sheen 是 none，等于没写。 */
   background-image: var(--box-sheen);

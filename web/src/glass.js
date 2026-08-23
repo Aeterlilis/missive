@@ -78,8 +78,16 @@ const LENS_POWER = 0.6;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/* 光靠 CSS.supports 判断不出来：WebKit 的解析器认这条语法（会返回 true），但渲染的时候
+   backdrop-filter 里的 url() 它不认，结果是整条 backdrop-filter 被丢掉——连模糊都没了，
+   固定横条底下滚过去的内容一个字不糊地透上来。所以再加一道引擎判断：navigator.vendor
+   在 Safari 和 iOS 上所有浏览器（iOS 的 Chrome/Edge 也是 WebKit 内核）都是 Apple，
+   桌面 Chrome/Edge/Firefox 都不是。 */
 export const LENS_SUPPORTED = (() => {
-  try { return CSS.supports('backdrop-filter', 'url(#glass-lens) blur(1px)'); } catch { return false; }
+  try {
+    if (navigator.vendor === 'Apple Computer, Inc.') return false;
+    return CSS.supports('backdrop-filter', 'url(#glass-lens) blur(1px)');
+  } catch { return false; }
 })();
 
 /* 位移贴图：跟玻璃块同尺寸的一张图，R 通道存横向偏移、G 通道存纵向偏移，128 表示不动。

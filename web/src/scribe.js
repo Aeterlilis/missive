@@ -17,6 +17,7 @@ export class Scribe {
     this.inkIdx = 0;                  // 已经"写"到第几个点
     this.done = true;                 // 当前批是否写完
     this.lines = [];                  // 已渲染文本的行几何（用于淡出时定位区域）
+    this.overflow = null;             // 这一页放不下、留给下一页的行（见 appendText）
     // 离屏渲染用
     this._off = null;                 // OffscreenCanvas / canvas
     this._octx = null;
@@ -46,28 +47,39 @@ export class Scribe {
     this._fontReady = true;
   }
 
-  // 追加一段文字（通常是一句），渲染→细化→trace→接在待写折线后面
-  // 返回本次追加的文字长度（用于停留时长计算）
+  // 追加一段文字（通常是一句），渲染→细化→trace→接在待写折线后面。
+  // 返回本次真正排进这一页的文字长度（用于停留时长计算）。
+  //
+  // text 可以是字符串，也可以是上一页没写完、已经折好的行数组——翻页续写时直接
+  // 把剩下的行传回来，不用重新折行（重折会因为 wrapText 在断行处吃掉空格而拼错）。
   async appendText(text, startY) {
     await this.ensureFont();
     const cw = this.ctx.canvas.width;
     const ch = this.ctx.canvas.height;
     const L = CONFIG.layout(cw, ch);
-    const fontFamily = pickFontFamily(text);
-    const wrapped = wrapText(this._octx, text, L.fontPx, cw - 2 * L.marginX, fontFamily);
+    const preWrapped = Array.isArray(text);
+    const plain = preWrapped ? text.map((l) => l.text).join('') : text;
+    const fontFamily = pickFontFamily(plain);
+    const wrapped = preWrapped
+      ? text
+      : wrapText(this._octx, text, L.fontPx, cw - 2 * L.marginX, fontFamily);
     let y = startY;
-    for (const line of wrapped) {
-      // 底部越界检查：如果这行会超出可用区域，停止追加（不再往下写）
+    for (let i = 0; i < wrapped.length; i++) {
+      const line = wrapped[i];
+      // 底部越界：这一页放不下了。把还没写的行留在 overflow 里交回调用方，
+      // 由 app.js 翻页（停留→吸干净→回到页首）之后接着写。
       if (y + L.lineHeight > L.maxY) {
+        this.overflow = wrapped.slice(i);
         this.done = false;
-        return text.length;
+        return plain.length - this.overflow.reduce((n, l) => n + l.text.length, 0);
       }
       const placed = this._layoutLine(line.text, y, line.width, L, fontFamily);
       y = placed.nextY;
       this.lines.push(placed);
     }
+    this.overflow = null;
     this.done = false;
-    return text.length;
+    return plain.length;
   }
 
   // 渲染一行文字 → 细化 → trace，把折线加入 this.ink
@@ -170,6 +182,8 @@ export class Scribe {
     this.inkIdx = 0;
     this.done = true;
     this.lines = [];
+    // 翻页续写的调用方要在 reset 之前把 overflow 取走存到自己的局部变量里
+    this.overflow = null;
   }
 }
 

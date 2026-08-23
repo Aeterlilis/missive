@@ -52,6 +52,9 @@ class App {
     this.phaseStart = 0;        // 当前阶段起始时间
     this.thinkPulseOn = false;
     this.charCount = 0;
+    this._pageChars = 0;          // 当前这一页写了多少字（停留时长按它算）
+    this._pageTurnPending = false; // 这一页写满了、还有下一页要写
+    this._pageTurnWaiters = [];    // 等着翻页完成再继续写的 _writeToPaper
     this.replyBox = null;
 
     this._setupCanvas();
@@ -232,6 +235,60 @@ class App {
     });
   }
 
+  // ─── 把一段文字写到纸上，一页写不下就翻页续写 ──────────────
+  // 一页能装的东西是有限的（见 CONFIG.layout：字号按屏宽走，上下还各留一截，
+  // 一屏也就五六行）。以前 scribe 写到底边就把剩下的行默默扔掉，长回复会被
+  // 截断得没头没尾，而且屏幕上看不出发生过这件事。
+  // 现在改成：写满一页 → 照常停留让人读完 → 饮墨吸干净 → 回到页首接着写，
+  // 直到这段全部写完。等待翻页靠 _pageTurnWaiters 这道闸，主循环在
+  // _tickFading 把这页吸完之后开闸（见 _startNextPage）。
+  async _writeToPaper(text) {
+    let remaining = text;
+    while (remaining) {
+      this._pulling = true;
+      let written = 0;
+      try {
+        written = await this.scribe.appendText(remaining, this._replyY);
+      } catch (e) {
+        console.error('appendText 失败:', e.message);
+        this._pulling = false;
+        return;
+      }
+      this._pulling = false;
+      this.charCount += written;
+      this._pageChars += written;
+      const box = this.scribe.replyBBox();
+      if (box) this._replyY = box.maxY + 8;
+      // scribe.reset() 会清掉 overflow，翻页前先取走存在自己手里
+      const leftover = this.scribe.overflow;
+      if (!leftover) return;
+      this._pageTurnPending = true;
+      await this._waitForPageTurn();
+      remaining = leftover;
+    }
+  }
+
+  _waitForPageTurn() {
+    return new Promise((resolve) => { this._pageTurnWaiters.push(resolve); });
+  }
+
+  // 这一页吸干净之后：回到页首，放行等着写下一页的那段文字
+  _startNextPage() {
+    this._pageTurnPending = false;
+    this.scribe.reset();
+    this.replyBox = null;
+    this._pageChars = 0;
+    this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
+    this.state = S.REPLYING;
+    this._releasePageTurn();
+  }
+
+  _releasePageTurn() {
+    const waiters = this._pageTurnWaiters;
+    this._pageTurnWaiters = [];
+    waiters.forEach((resolve) => resolve());
+  }
+
   // 独立消费 AI 回复的循环：持续读句子 → 喂给 scribe，直到流结束。
   // 不受主循环 tick 影响，避免"pullNext 没被调用"的竞态。
   async _consumeOracle() {
@@ -250,17 +307,9 @@ class App {
               this.state = S.REPLYING;
             }
           }
-          // _pulling 标记 appendText 进行中，阻止 _tickReplying 提前进 LINGERING
-          this._pulling = true;
-          try {
-            await this.scribe.appendText(value, this._replyY);
-          } catch (ae) {
-            console.error('appendText 失败:', ae.message);
-          }
-          this._pulling = false;
-          this.charCount += value.length;
-          const box = this.scribe.replyBBox();
-          if (box) this._replyY = box.maxY + 8;
+          // _writeToPaper 里会置 _pulling 标记 appendText 进行中，阻止
+          // _tickReplying 提前进 LINGERING；写不下的部分它自己负责翻页续写
+          await this._writeToPaper(value);
         }
       }
     } catch (e) {
@@ -355,6 +404,7 @@ class App {
     this._bgRect = null;
     this.phaseStart = now;
     this.scribe.reset();
+    this._pageChars = 0;
     this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
     // 饮墨跑完后才决定下一步，避免 AI 失败兜底抢占动画
     if (this._oracleFailed) {
@@ -401,16 +451,24 @@ class App {
       this.scribe.step();
       this._lastScribeStepAt = now;
     }
-    // 写完且流结束 → 停留。
     // !_pulling 保护：appendText 是 async，进行中时 scribe.done 可能短暂为 true
-    if (this.scribe.done && this._streamDone && !this._pulling) {
-      this.replyBox = this.scribe.replyBBox();
-      this.lingerUntil = now + Math.min(
-        CONFIG.LINGER_MAX_MS,
-        CONFIG.LINGER_BASE_MS + this.charCount * CONFIG.LINGER_PER_CHAR_MS
-      );
-      this.state = S.LINGERING;
-    }
+    if (!this.scribe.done || this._pulling) return;
+    // 这一页写满、后面还有 → 也走停留+饮墨这套，只是吸完不结束，
+    // 而是在 _tickFading 里翻页接着写（见 _startNextPage）
+    if (this._pageTurnPending) { this._enterLingering(now); return; }
+    // 写完且流结束 → 停留
+    if (this._streamDone) this._enterLingering(now);
+  }
+
+  // 停留时长按这一页写了多少字算，不按整段——多页回复的第二页不该因为
+  // 前面几页的字数被平白拉长
+  _enterLingering(now) {
+    this.replyBox = this.scribe.replyBBox();
+    this.lingerUntil = now + Math.min(
+      CONFIG.LINGER_MAX_MS,
+      CONFIG.LINGER_BASE_MS + this._pageChars * CONFIG.LINGER_PER_CHAR_MS
+    );
+    this.state = S.LINGERING;
   }
 
   // 拉 oracle 的下一句，喂给 scribe。流结束置 _streamDone。
@@ -461,10 +519,12 @@ class App {
   // 不是硬边一刀切）。比之前按笔画一片片闪烁顺滑，且总时长就是设置里那个数，
   // 不再摊薄到每一笔头上，不会被笔画数量拖累。
   _tickFading(now) {
-    if (!this.replyBox) { this._resetToListening(false); return; }
+    // 没东西可淡的两种异常情况：后面还有页要写就直接翻页，否则收尾回 LISTENING
+    const bail = () => { if (this._pageTurnPending) this._startNextPage(); else this._resetToListening(false); };
+    if (!this.replyBox) { bail(); return; }
     if (!this._fadeSnapshot) {
       const bbox = this.replyBox;
-      if (bbox.maxX <= bbox.minX || bbox.maxY <= bbox.minY) { this._resetToListening(false); return; }
+      if (bbox.maxX <= bbox.minX || bbox.maxY <= bbox.minY) { bail(); return; }
       this._fadeBBox = bbox;
       this._fadeSnapshot = this.ctx.getImageData(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
       this._fadeStart = now;
@@ -476,6 +536,8 @@ class App {
       clearRegion(this.ctx, this._fadeBBox);
       this._fadeSnapshot = null;
       this._fillPaper(); // 整页白底，清残影
+      // 这一页吸完了，但这段话还没写完 → 回到页首接着写，不结束这一轮
+      if (this._pageTurnPending) { this._startNextPage(); return; }
       this._resetToListening(false);
     }
   }
@@ -518,6 +580,11 @@ class App {
     this._gotContent = false;
     this.firstSentenceArrived = false;
     this.charCount = 0;
+    this._pageChars = 0;
+    // 这一轮结束了，别把还在等翻页的 _writeToPaper 挂死——放行让它自己走完，
+    // scribe 已经 reset，多余的循环写不出东西
+    this._pageTurnPending = false;
+    this._releasePageTurn();
     this.scribe.reset();
     this.replyBox = null;
     this._drinkSnapshot = null;
@@ -531,11 +598,13 @@ class App {
   async _emergencyLine(text) {
     this._drawThinkDot(false);
     this.scribe.reset();
+    this._pageChars = 0;
     this._replyY = CONFIG.layout(this.canvas.width, this.canvas.height).startY;
-    const len = await this.scribe.appendText(text, this._replyY);
-    this.charCount += len;
+    // 状态要在开写之前切好：_writeToPaper 万一需要翻页，翻页是靠主循环
+    // 走完 REPLYING→停留→饮墨推动的，状态没切过去就会一直等下去
     this.state = S.REPLYING;
     this._streamDone = true;
+    await this._writeToPaper(text);
   }
 
   _dbg(extra) {

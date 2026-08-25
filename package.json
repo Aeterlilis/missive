@@ -24,11 +24,23 @@
       "!server/settings.json"
     ],
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "build/icon.ico"
     },
-    "portable": {
-      "artifactName": "Missive-Portable.exe"
+    "nsis": {
+      "artifactName": "Missive-Setup-${version}.exe",
+      "language": "2052",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Missive",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "Missive",
+      "deleteAppDataOnUninstall": false
     },
     "directories": {
       "output": "dist"

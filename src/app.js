@@ -73,6 +73,7 @@ class App {
       standalone: true,
     });
     this._thinkingShown = false;
+    this._replyWaitSince = 0; // >0 表示正在等后续 token，值是开始等的时刻
 
     this.appIcon = new AppIcon(document.getElementById('hint-icon'), {
       // 图标里的笔落到纸上的同一刻，下面这行字也开始写——两处一起动才像一件事。
@@ -250,9 +251,14 @@ class App {
   _tickHint(now) {
     this.appIcon.step(now);
 
-    // 等回答的指示：只在 THINKING 那段空白期出现。用"当前状态"直接对齐显示与否，
-    // 而不是在每个状态切换处各写一遍开关，漏掉任何一条路径都不会卡在原地转圈。
-    const thinking = this.state === S.THINKING;
+    // 等回答的指示出现在两种时刻：THINKING 那段空白期，以及 REPLYING 途中纸上的字
+    // 追平了收到的内容、后续迟迟不来（见 _tickReplying）。两者对用户是同一件事——
+    // 还在等——所以共用同一个指示，不另造一套符号。
+    // 用"当前状态"直接对齐显示与否，而不是在每个状态切换处各写一遍开关，漏掉任何
+    // 一条路径都不会卡在原地转圈。
+    const thinking = this.state === S.THINKING ||
+      (this.state === S.REPLYING && this._replyWaitSince > 0 &&
+        now - this._replyWaitSince >= CONFIG.REPLY_WAIT_HINT_MS);
     if (thinking !== this._thinkingShown) {
       this._thinkingShown = thinking;
       this.thinkIcon.canvas.classList.toggle('on', thinking);
@@ -696,12 +702,16 @@ class App {
       this._lastScribeStepAt = now;
     }
     // !_pulling 保护：appendText 是 async，进行中时 scribe.done 可能短暂为 true
-    if (!this.scribe.done || this._pulling) return;
+    if (!this.scribe.done || this._pulling) { this._replyWaitSince = 0; return; }
     // 这一页写满、后面还有 → 也走停留+饮墨这套，只是吸完不结束，
     // 而是在 _tickFading 里翻页接着写（见 _startNextPage）
-    if (this._pageTurnPending) { this._enterLingering(now); return; }
+    if (this._pageTurnPending) { this._replyWaitSince = 0; this._enterLingering(now); return; }
     // 写完且流结束 → 停留
-    if (this._streamDone) this._enterLingering(now);
+    if (this._streamDone) { this._replyWaitSince = 0; this._enterLingering(now); return; }
+    // 走到这里：纸上的字已经追平收到的内容，剩下的还在路上。流要是就此卡住（既不给
+    // 数据也不报错），这个分支会一直空转，画面停在半句话上。记下开始等的时刻，交给
+    // _tickHint 决定什么时候把等待指示放出来。
+    if (!this._replyWaitSince) this._replyWaitSince = now;
   }
 
   // 停留时长按这一页写了多少字算，不按整段——多页回复的第二页不该因为
@@ -785,6 +795,7 @@ class App {
     this.oracle = null;
     this._pulling = null;
     this._streamDone = false;
+    this._replyWaitSince = 0;
     this._oracleFailed = false;
     this._gotContent = false;
     this.firstSentenceArrived = false;

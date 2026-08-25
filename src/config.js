@@ -22,6 +22,10 @@ export const CONFIG = {
   // 每帧"写"多少个骨架点，多少毫秒一帧
   SCRIBE_POINTS_PER_FRAME: 26,
   SCRIBE_FRAME_MS: 14,
+  // 纸上的字追平已收到的内容、后续 token 还没到，等够这么久就让等待指示重新露头。
+  // 取值要长过正常的 token 间隔（否则每写完一句都闪一下），短过用户开始怀疑是不是
+  // 写完了的时间。
+  REPLY_WAIT_HINT_MS: 2500,
   // 回答正文字号 & 留白：基准值（大屏用），小屏由 layout() 动态缩小
   REPLY_FONT_PX: 96,
   MARGIN_X: 120,

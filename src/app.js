@@ -989,7 +989,11 @@ async function loadRuntimeConfig() {
       CONFIG.INK_COLOR = s.brush.color || CONFIG.INK_COLOR;
       CONFIG.BRUSH_SIZE = s.brush.size || CONFIG.BRUSH_SIZE;
       CONFIG.BRUSH_PRESET_NAME = s.brush.preset || CONFIG.BRUSH_PRESET_NAME;
-      CONFIG.BRUSH_PARAMS = BRUSH_PRESETS[s.brush.preset] || BRUSH_PRESETS.pen;
+      CONFIG.BRUSH_PARAMS = { ...(BRUSH_PRESETS[s.brush.preset] || BRUSH_PRESETS.pen) };
+      // 存过的笔尖角度盖掉预设的默认值；没存过就用预设自带的
+      if (CONFIG.BRUSH_PARAMS.chisel && typeof s.brush.nibAngleDeg === 'number') {
+        CONFIG.BRUSH_PARAMS.nibAngleDeg = s.brush.nibAngleDeg;
+      }
     }
     CONFIG.AUTO_SEND_ENABLED = s.autoSendEnabled !== false;
     if (typeof s.autoSendSeconds === 'number') {
@@ -1210,6 +1214,10 @@ function bindToolbar(app) {
   // ─── 笔刷面板：写字页面里直接调，改了立刻生效并存到后端 ──
   const brushPanel = $('brush-panel');
   const sizePicker = $('brush-size-picker');
+  const anglePicker = $('brush-angle-picker');
+  // 要显隐的是 enhanceRangeSlider 包出来的那层 .mslider（轨道和手柄都在它里面），
+  // 只藏原生 input 的话轨道还留在面板上
+  const angleRow = () => anglePicker.closest('.mslider') || anglePicker;
 
   const btnBrush = $('btn-brush');
   btnBrush.addEventListener('click', () => {
@@ -1230,6 +1238,12 @@ function bindToolbar(app) {
   function syncBrushUI() {
     sizePicker.value = CONFIG.BRUSH_SIZE;
     sizePicker.dispatchEvent(new Event('input', { bubbles: true })); // 让自绘滑块的手柄位置跟着同步，见 enhanceRangeSlider
+    const chisel = !!CONFIG.BRUSH_PARAMS.chisel;
+    angleRow().classList.toggle('hidden', !chisel);
+    if (chisel) {
+      anglePicker.value = CONFIG.BRUSH_PARAMS.nibAngleDeg;
+      anglePicker.dispatchEvent(new Event('input', { bubbles: true }));
+    }
     document.querySelectorAll('.brush-presets button').forEach((b) => {
       b.classList.toggle('active', b.dataset.preset === CONFIG.BRUSH_PRESET_NAME);
     });
@@ -1254,15 +1268,22 @@ function bindToolbar(app) {
       const preset = btn.dataset.preset;
       const params = BRUSH_PRESETS[preset];
       CONFIG.BRUSH_PRESET_NAME = preset;
-      CONFIG.BRUSH_PARAMS = params;
+      // 拷贝一份：笔尖角度是就地改这个对象的，直接引用会把 BRUSH_PRESETS 里的预设本身改掉，
+      // 换回来就不是原来的手感了
+      CONFIG.BRUSH_PARAMS = { ...params };
       CONFIG.BRUSH_SIZE = params.defaultSize;
       syncBrushUI();
-      saveBrush({ preset, size: CONFIG.BRUSH_SIZE });
+      saveBrush({ preset, size: CONFIG.BRUSH_SIZE, nibAngleDeg: CONFIG.BRUSH_PARAMS.nibAngleDeg });
     });
   });
 
   sizePicker.addEventListener('input', () => { CONFIG.BRUSH_SIZE = parseInt(sizePicker.value, 10); });
   sizePicker.addEventListener('change', () => saveBrush({ size: parseInt(sizePicker.value, 10) }));
+
+  anglePicker.addEventListener('input', () => {
+    CONFIG.BRUSH_PARAMS.nibAngleDeg = parseInt(anglePicker.value, 10);
+  });
+  anglePicker.addEventListener('change', () => saveBrush({ nibAngleDeg: parseInt(anglePicker.value, 10) }));
 
   // ─── 颜色：预设色块 + 自定义色轮面板 ──────────────
   // 不用原生 <input type="color">：不少浏览器/webview（比如鸿蒙平板自带浏览器）

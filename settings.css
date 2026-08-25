@@ -466,6 +466,17 @@ textarea {
 .card-edit-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 .card-edit-rows label { margin-bottom: 0; }
 .card-edit-rows textarea { min-height: 90px; font-size: 13px; }
+/* 接口规范下拉：跟同一张卡片里的输入框长一样，不然一排框里混一个系统原生控件很扎眼 */
+.card-edit-rows select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--box-bg);
+  color: var(--ink);
+}
 
 .card-delete-fab {
   position: absolute;

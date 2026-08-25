@@ -467,7 +467,7 @@ function createApp() {
     const s = settingsStore.load();
     const profile = settingsStore.activeProfile(s);
     if (!profile.apiKey || !profile.baseUrl || !profile.model) {
-      return res.status(400).json({ error: '还没配置 API，请先点右上角齿轮打开设置' });
+      return res.status(400).json({ error: '还没配置 API，请先点右上角的设置图标填一下' });
     }
 
     // 组装 Responses API 请求（中转站是 Codex 专用，只允许 /v1/responses 端点）。
@@ -600,7 +600,7 @@ function createApp() {
     const s = settingsStore.load();
     const profile = settingsStore.activeProfile(s);
     if (!profile.apiKey || !profile.baseUrl || !profile.model) {
-      return res.status(400).json({ error: '还没配置 API，请先点右上角齿轮打开设置' });
+      return res.status(400).json({ error: '还没配置 API，请先点右上角的设置图标填一下' });
     }
 
     const contextEntries = history.recentContext(s.contextResetAt, s.contextTurns || 10);

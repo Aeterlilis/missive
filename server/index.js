@@ -1,7 +1,11 @@
 // Missive 后端。
 //  - 静态托管 ../web
 //  - GET/POST /api/settings：设置的读写（API配置/人设/速度/字体）
-//  - POST /interpret：接收 PNG 笔迹，转发给 OpenAI 兼容视觉模型，流式回传 SSE
+//  - POST /interpret：接收 PNG 笔迹，转发给视觉模型，流式回传 SSE
+//
+// 上游发什么形状、回来怎么拆，全在 ./providers.js 里按接口规范分开写
+// （OpenAI Responses / OpenAI Chat Completions / Anthropic Messages / Google Gemini）。
+// 这个文件只组装一份中立请求，不关心对面是谁。
 //
 // 可作为独立 Node 服务跑（`node index.js`，监听 0.0.0.0，供局域网设备访问），
 // 也可被 Electron 主进程 require() 后自行 listen(127.0.0.1) 做成桌面版——两边共用同一套逻辑。
@@ -12,7 +16,10 @@ const fs = require('fs');
 const express = require('express');
 const settingsStore = require('./settings');
 const history = require('./history');
+const providers = require('./providers');
 const { INSTRUCTION } = require('./persona');
+
+const DONE = providers.DONE;
 
 const DATA_DIR = process.env.SETTINGS_DIR || __dirname;
 const BACKGROUND_PATH = path.join(DATA_DIR, 'background.jpg');
@@ -30,7 +37,11 @@ function createApp() {
 
   // ─── 设置读写 ────────────────────────────────────
   // profiles 里的 apiKey 永远不回传给前端，只回传 hasKey 布尔值
-  const publicProfile = (p) => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, model: p.model, hasKey: !!p.apiKey });
+  // resolvedSpec 是"选自动识别时，现在这个 URL 会被判成哪种"，给设置页显示用
+  const publicProfile = (p) => ({
+    id: p.id, name: p.name, baseUrl: p.baseUrl, model: p.model, hasKey: !!p.apiKey,
+    spec: p.spec || 'auto', resolvedSpec: providers.resolveSpec(p),
+  });
 
   app.get('/api/settings', (req, res) => {
     const s = settingsStore.load();
@@ -307,6 +318,7 @@ function createApp() {
       baseUrl: (body.baseUrl || '').trim(),
       apiKey: (body.apiKey || '').trim(),
       model: (body.model || '').trim(),
+      spec: providers.SPECS[body.spec] ? body.spec : 'auto',
     });
     s.profiles.push(p);
     s.activeProfileId = p.id;
@@ -323,6 +335,7 @@ function createApp() {
     if (typeof body.baseUrl === 'string') p.baseUrl = body.baseUrl.trim();
     if (typeof body.apiKey === 'string' && body.apiKey.trim()) p.apiKey = body.apiKey.trim();
     if (typeof body.model === 'string') p.model = body.model.trim();
+    if (body.spec === 'auto' || providers.SPECS[body.spec]) p.spec = body.spec;
     settingsStore.save(s);
     res.json({ ok: true, profile: publicProfile(p) });
   });
@@ -340,7 +353,8 @@ function createApp() {
     res.json({ ok: true, activeProfileId: s.activeProfileId });
   });
 
-  // 拉取某个 OpenAI 兼容端点支持的模型列表，填模型名的时候可以直接选，不用手打
+  // 拉取某个端点支持的模型列表，填模型名的时候可以直接选，不用手打。
+  // 请求走的是"设置页里此刻填着的值"，还没保存也能试——所以 spec 也一起从前端带过来。
   app.post('/api/models', async (req, res) => {
     const body = req.body || {};
     let baseUrl = (body.baseUrl || '').trim();
@@ -356,19 +370,12 @@ function createApp() {
     if (!baseUrl || !apiKey) {
       return res.status(400).json({ error: '缺少 API 基础URL 或密钥' });
     }
+    const spec = (body.spec === 'auto' || providers.SPECS[body.spec]) ? body.spec : 'auto';
     try {
-      const url = baseUrl.replace(/\/$/, '') + '/models';
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
-      if (!r.ok) {
-        const detail = await r.text().catch(() => '');
-        return res.status(r.status).json({ error: `上游返回 ${r.status}`, detail: detail.slice(0, 300) });
-      }
-      const data = await r.json();
-      const list = Array.isArray(data.data) ? data.data : Array.isArray(data.models) ? data.models : [];
-      const models = list.map((m) => (typeof m === 'string' ? m : m.id)).filter(Boolean).sort();
+      const models = await providers.listModels({ baseUrl, apiKey, spec });
       res.json({ models });
     } catch (e) {
-      res.status(502).json({ error: e.message });
+      res.status(e.status || 502).json({ error: e.message, detail: e.detail });
     }
   });
 
@@ -414,36 +421,23 @@ function createApp() {
         + '"blank":["风把字吹散了，再写一遍吧。","我这儿是空的，你再来一次。","什么都没剩下，重来。"]}',
     ].join('\n');
 
-    const payload = {
-      model: profile.model,
+    const request = {
       stream: false,
-      max_output_tokens: 800,
+      maxTokens: 800,
       instructions: settingsStore.buildInstructions(s),
-      input: [{ role: 'user', content: [{ type: 'input_text', text: TASK }] }],
+      turns: [{ role: 'user', parts: [{ type: 'text', text: TASK }] }],
     };
 
     let data;
     try {
-      const upstream = await fetch(`${profile.baseUrl.replace(/\/$/, '')}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${profile.apiKey}`,
-          'User-Agent': 'codex_cli_rs/0.45.0',
-          originator: 'codex_cli_rs',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!upstream.ok) {
-        const detail = await upstream.text().catch(() => '');
-        return res.status(upstream.status).json({ error: `上游返回 ${upstream.status}`, detail: detail.slice(0, 300) });
-      }
+      // 不重试：这是彩蛋，失败了再按一次就行，不值得替用户多花几次调用
+      const upstream = await postUpstream(profile, request, { maxRetries: 1 });
       data = await upstream.json();
     } catch (e) {
-      return res.status(502).json({ error: '无法连接模型服务', detail: e.message });
+      return sendUpstreamError(res, e);
     }
 
-    const parsed = parseAttuneResult(extractOutputText(data));
+    const parsed = parseAttuneResult(providers.extractText(profile, data));
     // 戳的那五档是这次的主菜，它没解析出来就整个算失败——保留原有的，绝不写半套进去。
     // 三种托辞是各自独立的，谁能用就换谁，剩下的继续用内置那份。
     if (!parsed || !parsed.poke) {
@@ -470,129 +464,44 @@ function createApp() {
       return res.status(400).json({ error: '还没配置 API，请先点右上角的设置图标填一下' });
     }
 
-    // 组装 Responses API 请求（中转站是 Codex 专用，只允许 /v1/responses 端点）。
     const base64 = pngBuffer.toString('base64');
     const currentImageDataUrl = `data:image/png;base64,${base64}`;
 
     // 滚动上下文：把最近几轮（用户写的图/打的字 + AI当时的回复）一起发过去，AI才能接得上话。
     // 用户手动"重置对话"之后，重置点之前的历史就不会再被算进去了。
     const contextEntries = history.recentContext(s.contextResetAt, s.contextTurns || 10);
-    const contextInput = buildContextInput(contextEntries);
 
-    const payload = {
-      model: profile.model,
+    const request = {
       stream: true,
-      max_output_tokens: parseInt(s.maxTokens, 10) || 280,
+      maxTokens: parseInt(s.maxTokens, 10) || 280,
       instructions: settingsStore.buildInstructions(s),
-      input: [...contextInput, {
+      turns: [...buildContextTurns(contextEntries), {
         role: 'user',
-        content: [
-          { type: 'input_text', text: INSTRUCTION },
-          { type: 'input_image', image_url: currentImageDataUrl },
+        parts: [
+          { type: 'text', text: INSTRUCTION },
+          { type: 'image', dataUrl: currentImageDataUrl },
         ],
       }],
     };
 
-    // 上游请求（流式，带重试）：中转站对图片请求会高频 403，需要多次重试 + 指数退避
-    let upstream = null;
-    const MAX_RETRIES = 8;
-    const upstreamUrl = `${profile.baseUrl.replace(/\/$/, '')}/responses`;
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        upstream = await fetch(upstreamUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${profile.apiKey}`,
-            'User-Agent': 'codex_cli_rs/0.45.0',
-            'originator': 'codex_cli_rs',
-          },
-          body: JSON.stringify(payload),
-        });
-      } catch (err) {
-        console.error(`第${attempt}次连接失败:`, err.message);
-        if (attempt === MAX_RETRIES) {
-          return res.status(502).json({ error: '无法连接模型服务', detail: err.message });
-        }
-        await sleep(300 * attempt);
-        continue;
-      }
-      if (upstream.ok && upstream.body) break;
-      const detail = await upstream.text().catch(() => '');
-      if ((upstream.status === 403 || upstream.status === 429 || upstream.status === 500) && attempt < MAX_RETRIES) {
-        console.error(`第${attempt}次上游 ${upstream.status}，${attempt}s 后重试`);
-        await sleep(1000 * attempt);
-        upstream = null;
-        continue;
-      }
-      console.error(`上游 ${upstream.status}:`, detail.slice(0, 300));
-      return res.status(upstream.status).json({ error: '模型服务返回错误', detail });
+    let upstream;
+    try {
+      upstream = await postUpstream(profile, request);
+    } catch (e) {
+      return sendUpstreamError(res, e);
     }
-
-    if (!upstream || !upstream.ok || !upstream.body) {
-      return res.status(502).json({ error: '多次重试后仍无法获取模型响应' });
-    }
-
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders?.();
-
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    let sseBuffer = '';
-    let tokenCount = 0;
-    let fullText = '';
-    const startedAt = Date.now();
 
     // 流跑完了：把这一轮存进历史，下一轮才能接上上下文
-    const saveTurn = () => {
+    await pipeStream(res, upstream, profile, (fullText) => {
       if (fullText.trim()) {
         history.append({ kind: 'ink', imageDataUrl: currentImageDataUrl, reply: fullText, conversationId: s.conversationId || 1 });
       }
-    };
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-
-        let nl;
-        while ((nl = sseBuffer.indexOf('\n\n')) !== -1) {
-          const eventBlock = sseBuffer.slice(0, nl);
-          sseBuffer = sseBuffer.slice(nl + 2);
-          const result = extractResponsesDelta(eventBlock);
-          if (result === DONE) {
-            res.write('data: [DONE]\n\n');
-            console.log(`✓ 完成 ${tokenCount} token，用时 ${Date.now() - startedAt}ms`);
-            saveTurn();
-            return res.end();
-          }
-          if (result) {
-            tokenCount++;
-            fullText += result;
-            res.write(`data: ${JSON.stringify(result)}\n\n`);
-          }
-        }
-      }
-      res.write('data: [DONE]\n\n');
-      console.log(`✓ 完成 ${tokenCount} token，用时 ${Date.now() - startedAt}ms`);
-      saveTurn();
-      res.end();
-    } catch (err) {
-      console.error('转发中断:', err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: '转发中断', detail: err.message });
-      } else {
-        try { res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`); res.end(); } catch {}
-      }
-    }
+    });
   });
 
   // ─── POST /interpret-text ─────────────────────────
   // 打字模式：请求体是 JSON { text }，不是图片。流程和 /interpret 完全一样，
-  // 只是"这一轮"用 input_text 而不是 input_image；历史里记的 kind 也是 'typed'。
+  // 只是"这一轮"发的是文字而不是图片；历史里记的 kind 也是 'typed'。
   app.post('/interpret-text', async (req, res) => {
     const text = ((req.body || {}).text || '').trim();
     if (!text) return res.status(400).json({ error: '没有收到文字内容' });
@@ -604,136 +513,146 @@ function createApp() {
     }
 
     const contextEntries = history.recentContext(s.contextResetAt, s.contextTurns || 10);
-    const contextInput = buildContextInput(contextEntries);
 
     // 人设卡片默认是围绕"看图读墨迹"写的（"如果字迹潦草……看不清就说看不清"），
     // 打字模式没有图片，得追一句提示，不然AI容易莫名其妙地说"看不清"。
     const TYPED_MODE_NOTE = '（提示：这一次对方是直接打字发给你的，不是手写照片，正常回应文字内容即可，不要说"看不清"、"字迹模糊"之类只适用于图片的话。）';
 
-    const payload = {
-      model: profile.model,
+    const request = {
       stream: true,
-      max_output_tokens: parseInt(s.maxTokens, 10) || 280,
+      maxTokens: parseInt(s.maxTokens, 10) || 280,
       instructions: settingsStore.buildInstructions(s) + '\n\n' + TYPED_MODE_NOTE,
-      input: [...contextInput, { role: 'user', content: [{ type: 'input_text', text }] }],
+      turns: [...buildContextTurns(contextEntries), { role: 'user', parts: [{ type: 'text', text }] }],
     };
 
-    let upstream = null;
-    const MAX_RETRIES = 8;
-    const upstreamUrl = `${profile.baseUrl.replace(/\/$/, '')}/responses`;
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        upstream = await fetch(upstreamUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${profile.apiKey}`,
-            'User-Agent': 'codex_cli_rs/0.45.0',
-            'originator': 'codex_cli_rs',
-          },
-          body: JSON.stringify(payload),
-        });
-      } catch (err) {
-        console.error(`第${attempt}次连接失败:`, err.message);
-        if (attempt === MAX_RETRIES) {
-          return res.status(502).json({ error: '无法连接模型服务', detail: err.message });
-        }
-        await sleep(300 * attempt);
-        continue;
-      }
-      if (upstream.ok && upstream.body) break;
-      const detail = await upstream.text().catch(() => '');
-      if ((upstream.status === 403 || upstream.status === 429 || upstream.status === 500) && attempt < MAX_RETRIES) {
-        console.error(`第${attempt}次上游 ${upstream.status}，${attempt}s 后重试`);
-        await sleep(1000 * attempt);
-        upstream = null;
-        continue;
-      }
-      console.error(`上游 ${upstream.status}:`, detail.slice(0, 300));
-      return res.status(upstream.status).json({ error: '模型服务返回错误', detail });
+    let upstream;
+    try {
+      upstream = await postUpstream(profile, request);
+    } catch (e) {
+      return sendUpstreamError(res, e);
     }
 
-    if (!upstream || !upstream.ok || !upstream.body) {
-      return res.status(502).json({ error: '多次重试后仍无法获取模型响应' });
-    }
-
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders?.();
-
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    let sseBuffer = '';
-    let tokenCount = 0;
-    let fullText = '';
-    const startedAt = Date.now();
-
-    const saveTurn = () => {
+    await pipeStream(res, upstream, profile, (fullText) => {
       if (fullText.trim()) {
         history.append({ kind: 'typed', userText: text, reply: fullText, conversationId: s.conversationId || 1 });
       }
-    };
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-
-        let nl;
-        while ((nl = sseBuffer.indexOf('\n\n')) !== -1) {
-          const eventBlock = sseBuffer.slice(0, nl);
-          sseBuffer = sseBuffer.slice(nl + 2);
-          const result = extractResponsesDelta(eventBlock);
-          if (result === DONE) {
-            res.write('data: [DONE]\n\n');
-            console.log(`✓ 完成 ${tokenCount} token，用时 ${Date.now() - startedAt}ms`);
-            saveTurn();
-            return res.end();
-          }
-          if (result) {
-            tokenCount++;
-            fullText += result;
-            res.write(`data: ${JSON.stringify(result)}\n\n`);
-          }
-        }
-      }
-      res.write('data: [DONE]\n\n');
-      console.log(`✓ 完成 ${tokenCount} token，用时 ${Date.now() - startedAt}ms`);
-      saveTurn();
-      res.end();
-    } catch (err) {
-      console.error('转发中断:', err.message);
-      if (!res.headersSent) {
-        res.status(500).json({ error: '转发中断', detail: err.message });
-      } else {
-        try { res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`); res.end(); } catch {}
-      }
-    }
+    });
   });
 
   return app;
 }
 
-const DONE = Symbol('done');
-
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-// 把一条历史记录变成 Responses API 的一轮 input（用户那半 + AI回复那半）。
-// 手写来的用 input_image，打字/导入图片是另外两种来源，分别对应 input_text / input_image。
-function buildContextTurn(entry) {
-  const userContent = entry.kind === 'typed'
-    ? [{ type: 'input_text', text: entry.userText || '' }]
-    : [{ type: 'input_image', image_url: entry.imageDataUrl }];
-  return [
-    { role: 'user', content: userContent },
-    { role: 'assistant', content: [{ type: 'output_text', text: entry.reply }] },
-  ];
+// 把一条历史记录摊成中立请求里的一轮（用户那半 + AI回复那半）。
+// 手写来的那半是图，打字来的那半是文字。
+function buildContextTurns(entries) {
+  return entries.flatMap((entry) => [
+    {
+      role: 'user',
+      parts: entry.kind === 'typed'
+        ? [{ type: 'text', text: entry.userText || '' }]
+        : [{ type: 'image', dataUrl: entry.imageDataUrl }],
+    },
+    { role: 'assistant', parts: [{ type: 'text', text: entry.reply }] },
+  ]);
 }
 
-function buildContextInput(entries) {
-  return entries.flatMap(buildContextTurn);
+// 这几个状态码是"再试一次说不定就过了"：中转站对图片请求会高频 403，
+// 429/500 也常常是一阵子的事。别的错（401 密钥不对、404 模型不存在）重试没意义。
+const RETRY_STATUS = new Set([403, 429, 500]);
+
+// 往上游发一次请求，带退避重试。成功返回 fetch 的 Response，失败抛出带 status/detail 的错误。
+async function postUpstream(profile, request, { maxRetries = 8 } = {}) {
+  const { url, headers, body } = providers.buildRequest(profile, request);
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    let upstream;
+    try {
+      upstream = await fetch(url, { method: 'POST', headers, body });
+    } catch (err) {
+      console.error(`第${attempt}次连接失败:`, err.message);
+      if (attempt === maxRetries) throw upstreamError('无法连接模型服务', 502, err.message);
+      await sleep(300 * attempt);
+      continue;
+    }
+    if (upstream.ok && (!request.stream || upstream.body)) return upstream;
+
+    const detail = await upstream.text().catch(() => '');
+    if (RETRY_STATUS.has(upstream.status) && attempt < maxRetries) {
+      console.error(`第${attempt}次上游 ${upstream.status}，${attempt}s 后重试`);
+      await sleep(1000 * attempt);
+      continue;
+    }
+    console.error(`上游 ${upstream.status}:`, detail.slice(0, 300));
+    throw upstreamError('模型服务返回错误', upstream.status, detail);
+  }
+  throw upstreamError('多次重试后仍无法获取模型响应', 502);
+}
+
+function upstreamError(message, status, detail) {
+  const e = new Error(message);
+  e.status = status;
+  if (detail) e.detail = detail;
+  return e;
+}
+
+function sendUpstreamError(res, e) {
+  return res.status(e.status || 502).json({ error: e.message, detail: e.detail });
+}
+
+// 把上游的流按当前规范拆成纯文本增量，逐段转成本应用自己那套 SSE
+// （每行 data: {token}，结束时 data: [DONE]）。前端只认这一种形状，跟上游是谁无关。
+// onFinish 拿到的是这一轮的完整文本，用来落历史。
+async function pipeStream(res, upstream, profile, onFinish) {
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let sseBuffer = '';
+  let tokenCount = 0;
+  let fullText = '';
+  const startedAt = Date.now();
+
+  const finish = () => {
+    res.write('data: [DONE]\n\n');
+    console.log(`✓ 完成 ${tokenCount} token，用时 ${Date.now() - startedAt}ms`);
+    onFinish(fullText);
+    res.end();
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+
+      let nl;
+      while ((nl = sseBuffer.indexOf('\n\n')) !== -1) {
+        const eventBlock = sseBuffer.slice(0, nl);
+        sseBuffer = sseBuffer.slice(nl + 2);
+        const result = providers.parseDelta(profile, eventBlock);
+        if (result === DONE) return finish();
+        if (result) {
+          tokenCount++;
+          fullText += result;
+          res.write(`data: ${JSON.stringify(result)}\n\n`);
+        }
+      }
+    }
+    // Gemini 不发结束事件，流断了就是完了
+    finish();
+  } catch (err) {
+    console.error('转发中断:', err.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: '转发中断', detail: err.message });
+    } else {
+      try { res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`); res.end(); } catch {}
+    }
+  }
 }
 
 const SUMMARY_PROMPT = '请把以上这些互动内容总结成一段简短的长期记忆备注，帮助你以后回忆起对方是谁、聊过什么、有什么值得记住的事或偏好。控制在150字以内，不分点、不用markdown，就写成一段随手记的备注。';
@@ -741,41 +660,15 @@ const SUMMARY_PROMPT = '请把以上这些互动内容总结成一段简短的�
 // 让AI把最近几轮对话总结成一段话，用于生成"长期记忆"卡片。复用 /interpret 同款的
 // 流式请求 + 重试逻辑，只是这里在服务端把整段流吃完再一次性返回文本，不转发给前端。
 async function requestSummary(profile, contextEntries) {
-  const input = buildContextInput(contextEntries);
-  input.push({ role: 'user', content: [{ type: 'input_text', text: SUMMARY_PROMPT }] });
-
-  const payload = { model: profile.model, stream: true, max_output_tokens: 300, input };
-  const url = `${profile.baseUrl.replace(/\/$/, '')}/responses`;
-
-  let upstream = null;
-  const MAX_RETRIES = 4;
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      upstream = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${profile.apiKey}`,
-          'User-Agent': 'codex_cli_rs/0.45.0',
-          'originator': 'codex_cli_rs',
-        },
-        body: JSON.stringify(payload),
-      });
-    } catch (err) {
-      if (attempt === MAX_RETRIES) throw err;
-      await sleep(400 * attempt);
-      continue;
-    }
-    if (upstream.ok && upstream.body) break;
-    if ((upstream.status === 403 || upstream.status === 429 || upstream.status === 500) && attempt < MAX_RETRIES) {
-      await sleep(800 * attempt);
-      upstream = null;
-      continue;
-    }
-    const detail = await upstream.text().catch(() => '');
-    throw new Error(`上游返回 ${upstream.status}: ${detail.slice(0, 200)}`);
-  }
-  if (!upstream || !upstream.body) throw new Error('没拿到模型响应');
+  const request = {
+    stream: true,
+    maxTokens: 300,
+    turns: [
+      ...buildContextTurns(contextEntries),
+      { role: 'user', parts: [{ type: 'text', text: SUMMARY_PROMPT }] },
+    ],
+  };
+  const upstream = await postUpstream(profile, request, { maxRetries: 4 });
 
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
@@ -789,50 +682,12 @@ async function requestSummary(profile, contextEntries) {
     while ((nl = sseBuffer.indexOf('\n\n')) !== -1) {
       const block = sseBuffer.slice(0, nl);
       sseBuffer = sseBuffer.slice(nl + 2);
-      const result = extractResponsesDelta(block);
+      const result = providers.parseDelta(profile, block);
       if (result === DONE) return fullText;
       if (result) fullText += result;
     }
   }
   return fullText;
-}
-
-// 从 Responses API 的 SSE 事件块里提取输出文本增量
-function extractResponsesDelta(eventBlock) {
-  let eventName = '';
-  let dataLine = '';
-  for (const line of eventBlock.split('\n')) {
-    const t = line.trim();
-    if (t.startsWith('event:')) eventName = t.slice(6).trim();
-    else if (t.startsWith('data:')) dataLine = t.slice(5).trim();
-  }
-  if (eventName === 'response.completed' || eventName === 'response.failed' || dataLine === '[DONE]') {
-    return DONE;
-  }
-  if (eventName === 'response.output_text.delta' && dataLine) {
-    try {
-      const obj = JSON.parse(dataLine);
-      if (typeof obj.delta === 'string') return obj.delta;
-    } catch {}
-  }
-  return null;
-}
-
-// 启动服务。port=0 让系统分配空闲端口（桌面版用）。
-// 从 /responses 的非流式返回里把文本抠出来。不同上游对这个结构的实现有出入，
-// 挨个位置试一遍，别为了一个彩蛋去挑供应商。
-function extractOutputText(data) {
-  if (!data) return '';
-  if (typeof data.output_text === 'string') return data.output_text;
-  const chunks = [];
-  for (const item of data.output || []) {
-    for (const c of item.content || []) {
-      if (typeof c.text === 'string') chunks.push(c.text);
-    }
-  }
-  if (chunks.length) return chunks.join('');
-  // 退一步试试 chat completions 那套形状
-  return data.choices?.[0]?.message?.content || '';
 }
 
 const FALLBACK_KINDS = ['unreadable', 'distracted', 'blank'];

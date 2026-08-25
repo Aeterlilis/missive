@@ -531,6 +531,35 @@ const LINK_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" st
 const MODEL_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 5.5h14v8H8l-3.5 3v-3H3z"/></svg>';
 const TRASH_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>';
 const CHECK_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>';
+const PLUG_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 2.5v4M12.5 2.5v4"/><path d="M5 6.5h10v3.5a5 5 0 0 1-10 0z"/><path d="M10 15v3"/></svg>';
+
+// ─── 接口规范 ─────────────────────────────────────
+// 每套配置对着的上游是哪种规范。真正的翻译在 server/providers.js，这里只管选和显示。
+const SPEC_OPTIONS = [
+  { id: 'auto', label: '自动识别' },
+  { id: 'chat', label: 'OpenAI Chat Completions' },
+  { id: 'responses', label: 'OpenAI Responses' },
+  { id: 'anthropic', label: 'Anthropic Messages' },
+  { id: 'gemini', label: 'Google Gemini' },
+];
+const SPEC_LABELS = Object.fromEntries(SPEC_OPTIONS.map((o) => [o.id, o.label]));
+const SPEC_PLACEHOLDERS = {
+  auto: 'https://xxx.com/v1',
+  chat: 'https://api.deepseek.com/v1',
+  responses: 'https://xxx.com/v1',
+  anthropic: 'https://api.anthropic.com',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+};
+
+// 跟 server/providers.js 里的 detectSpec 是同一套规则。这边留一份是为了填 URL 的当下
+// 就能看到"会被判成哪种"，不用等保存往返一趟；改判断条件时两边都要改。
+function detectSpec(baseUrl) {
+  const u = String(baseUrl || '').toLowerCase();
+  if (/anthropic|\/claude/.test(u)) return 'anthropic';
+  if (/generativelanguage|googleapis|gemini/.test(u)) return 'gemini';
+  if (/codex|\/responses/.test(u)) return 'responses';
+  return 'chat';
+}
 
 function iconSpan(svg) {
   const span = document.createElement('span');
@@ -660,12 +689,47 @@ function buildProfileCard(profile) {
   preview.className = 'card-preview-rows';
   preview.appendChild(previewRow(KEY_ICON, profile.hasKey ? '已设置' : '还没配置'));
   preview.appendChild(previewRow(LINK_ICON, profile.baseUrl || '还没填 URL'));
+  preview.appendChild(previewRow(PLUG_ICON, profile.spec === 'auto'
+    ? `自动识别 · ${SPEC_LABELS[profile.resolvedSpec] || '—'}`
+    : SPEC_LABELS[profile.spec] || '—'));
   preview.appendChild(previewRow(MODEL_ICON, profile.model || '还没选模型'));
   card.appendChild(preview);
 
   const editRows = document.createElement('div');
   editRows.className = 'card-edit-rows';
-  editRows.appendChild(fieldLabel('API 基础 URL', 'text', 'field-baseurl', profile.baseUrl, 'https://xxx.com/v1'));
+
+  const urlLabel = fieldLabel('API 基础 URL', 'text', 'field-baseurl', profile.baseUrl, 'https://xxx.com/v1');
+  const urlInput = urlLabel.querySelector('input');
+
+  // 接口规范选在 URL 上面：URL 该长什么样是跟着规范走的，占位符也随之变
+  const specWrap = document.createElement('label');
+  const specSpan = document.createElement('span');
+  specSpan.textContent = '接口规范';
+  specWrap.appendChild(specSpan);
+  const specSelect = document.createElement('select');
+  specSelect.className = 'field-spec';
+  for (const opt of SPEC_OPTIONS) {
+    const el = document.createElement('option');
+    el.value = opt.id;
+    el.textContent = opt.label;
+    specSelect.appendChild(el);
+  }
+  specSelect.value = SPEC_LABELS[profile.spec] ? profile.spec : 'auto';
+  const specHint = document.createElement('span');
+  specHint.className = 'hint';
+  const refreshSpec = () => {
+    const effective = specSelect.value === 'auto' ? detectSpec(urlInput.value) : specSelect.value;
+    urlInput.placeholder = SPEC_PLACEHOLDERS[effective];
+    specHint.textContent = specSelect.value === 'auto' ? `按这个 URL 判断：${SPEC_LABELS[effective]}` : '';
+  };
+  specSelect.addEventListener('change', refreshSpec);
+  urlInput.addEventListener('input', refreshSpec);
+  refreshSpec();
+  specWrap.appendChild(specSelect);
+  specWrap.appendChild(specHint);
+
+  editRows.appendChild(specWrap);
+  editRows.appendChild(urlLabel);
   editRows.appendChild(fieldLabel('API 密钥', 'password', 'field-apikey', '', profile.hasKey ? '已设置，留空则不修改' : '还没有配置'));
 
   const modelWrap = document.createElement('label');
@@ -699,7 +763,7 @@ function buildProfileCard(profile) {
       const res = await fetch('/api/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseUrl, apiKey, profileId: profile.id }),
+        body: JSON.stringify({ baseUrl, apiKey, profileId: profile.id, spec: specSelect.value }),
       });
       const out = await res.json();
       if (!res.ok) throw new Error(out.error || '拉取失败');
@@ -727,7 +791,8 @@ function buildProfileCard(profile) {
   card.addEventListener('click', (e) => {
     if (radio.contains(e.target) || e.target.closest('.card-delete-fab')) return;
     if (handleStackClick(card, head, e)) return;
-    const isTypingIntoField = card.classList.contains('editing') && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+    const isTypingIntoField = card.classList.contains('editing')
+      && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT');
     if (isTypingIntoField) return; // 编辑态点输入框本身是正常打字，不要收起
     setCardEditing(card, !card.classList.contains('editing'));
   });
@@ -1099,6 +1164,7 @@ async function saveAll() {
         name: el.querySelector('.field-name').value,
         baseUrl: el.querySelector('.field-baseurl').value,
         model: el.querySelector('.field-model').value,
+        spec: el.querySelector('.field-spec').value,
       };
       const apiKey = el.querySelector('.field-apikey').value.trim();
       if (apiKey) body.apiKey = apiKey;

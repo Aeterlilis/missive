@@ -6,6 +6,8 @@
 //     四类，每类下能建好几张卡片，每张能单独开关，最终发给AI的是所有开着的卡片内容拼起来。
 // v4：首屏提示语也搬进卡片系统，多加一个 hint 类别——但这类卡片不参与拼AI提示词（CARD_CATEGORIES
 //     不含它），而是每天从"开着的"卡片里随机选一条展示，见 resolveHintText。
+// v5：配置槽位多一个 spec 字段（接口规范：auto/responses/chat/anthropic/gemini），
+//     见 ./providers.js。存量配置一律写死成 responses——它们都是按那个接口配好能用的。
 
 const fs = require('fs');
 const path = require('path');
@@ -28,6 +30,7 @@ function newProfile(overrides = {}) {
     baseUrl: '',
     apiKey: '',
     model: '',
+    spec: 'auto', // 接口规范；auto 表示按 baseUrl 现场猜，见 ./providers.js
     ...overrides,
   };
 }
@@ -117,6 +120,7 @@ function migrateFromEnv() {
       baseUrl: get('OPENAI_BASE_URL'),
       apiKey,
       model: get('OPENAI_MODEL'),
+      spec: 'responses', // .env 那个年代只有 Responses 一种接口
     });
     return {
       ...defaultsWithProfile(),
@@ -136,6 +140,7 @@ function migrateFlatToProfiles(raw) {
     baseUrl: raw.baseUrl || '',
     apiKey: raw.apiKey || '',
     model: raw.model || '',
+    spec: 'responses', // 单配置那个年代只有 Responses 一种接口
   });
   const next = { ...raw };
   delete next.baseUrl;
@@ -172,23 +177,36 @@ function migrateHintToCard(raw) {
   return next;
 }
 
+// 兼容 v4 之前的配置槽位：那时候还没有 spec 字段。存量配置全是照 Responses 接口填的，
+// 明确写成 'responses' 而不是留给自动识别——升级不该把本来能用的配置改坏。
+function migrateProfileSpec(raw) {
+  if (!Array.isArray(raw.profiles)) return raw; // 还是老的扁平格式，交给上面的迁移先跑
+  if (raw.profiles.every((p) => typeof p.spec === 'string')) return raw;
+  return {
+    ...raw,
+    profiles: raw.profiles.map((p) => (typeof p.spec === 'string' ? p : { ...p, spec: 'responses' })),
+  };
+}
+
 function load() {
   if (fs.existsSync(SETTINGS_PATH)) {
     try {
       const raw = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf-8'));
       const wasFlat = !Array.isArray(raw.profiles);
       const wasFlatPersona = !Array.isArray(raw.promptCards);
+      const wasMissingSpec = wasFlat || raw.profiles.some((p) => typeof p.spec !== 'string');
       // 迁移顺序很重要：先在原始数据上做迁移拿到真实内容，再补齐缺省字段——
       // 一旦先套上默认值里的空数组，旧的顶层字段就会被当成"已经有了"而被忽略
       let upgraded = migrateFlatToProfiles(raw);
       upgraded = migratePersonaToCards(upgraded);
       const wasMissingHintCard = !upgraded.promptCards.some((c) => c.category === HINT_CATEGORY);
       upgraded = migrateHintToCard(upgraded);
+      upgraded = migrateProfileSpec(upgraded);
       const merged = { ...defaultsWithProfile(), ...upgraded };
       if (!merged.profiles.some((p) => p.id === merged.activeProfileId)) {
         merged.activeProfileId = merged.profiles[0].id;
       }
-      if (wasFlat || wasFlatPersona || wasMissingHintCard) save(merged); // 落盘一次，避免每次读取都重新迁移
+      if (wasFlat || wasFlatPersona || wasMissingHintCard || wasMissingSpec) save(merged); // 落盘一次，避免每次读取都重新迁移
       return merged;
     } catch {
       return defaultsWithProfile();

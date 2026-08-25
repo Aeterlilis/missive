@@ -249,10 +249,21 @@ function startWatching() {
   new MutationObserver(scheduleRefresh).observe(document.body, { childList: true, subtree: true });
 }
 
-/* 玻璃强度：'enhanced' = 更透亮档，其余（'standard' 和没设过的）走 chrome-theme.css 的默认值。
-   三个页面拉到设置后各自调一次，设置页里换档也调。 */
+/* 玻璃强度：'off' = 不用玻璃，'enhanced' = 更透亮档，其余（'standard' 和没设过的）
+   走 chrome-theme.css 的默认值。三个页面拉到设置后各自调一次，设置页里换档也调。 */
 export function applyGlassIntensity(mode) {
   const root = document.documentElement.style;
+  if (mode === 'off') {
+    // 模糊、提饱和、反光、边缘光全撤掉，只剩底色和边框。底色的透明度不归这里管——
+    // 那是"界面配色"里那根滑块的事，关了玻璃它照样说话算数。
+    root.setProperty('--box-blur', 'none');
+    root.setProperty('--box-rim', 'none');
+    root.setProperty('--box-sheen', 'none');
+    root.setProperty('--box-band-w', '0px');
+    root.setProperty('--box-band-filter', 'none');
+    unmountLenses();
+    return;
+  }
   if (mode !== 'enhanced') {
     root.setProperty('--box-blur', STANDARD_BLUR);
     root.setProperty('--box-rim', 'none');

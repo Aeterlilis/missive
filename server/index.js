@@ -224,7 +224,7 @@ function createApp() {
     if (typeof body.chromeBorderAlpha === 'number' && body.chromeBorderAlpha > 0) {
       next.chromeBorderAlpha = Math.max(0.05, Math.min(1, body.chromeBorderAlpha));
     }
-    if (['standard', 'enhanced'].includes(body.glassIntensity)) next.glassIntensity = body.glassIntensity;
+    if (['off', 'standard', 'enhanced'].includes(body.glassIntensity)) next.glassIntensity = body.glassIntensity;
     if (['default', 'liujian', 'zhimang', 'notoserif', 'chunfeng', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
     if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;
     if (typeof body.autoSendSeconds === 'number' && body.autoSendSeconds > 0) {

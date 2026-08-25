@@ -256,8 +256,9 @@
         </div>
 
         <h3 style="margin-top:16px">玻璃强度</h3>
-        <p class="hint" id="glass-intensity-hint">标准是普通毛玻璃；"更透亮"更清透，支持的设备上还会有轻微的折射扭曲。</p>
+        <p class="hint" id="glass-intensity-hint">关闭后只剩底色和边框，没有模糊；标准是普通毛玻璃；"更透亮"更清透，支持的设备上还会有轻微的折射扭曲。底色的透明度在"界面配色"的自定义里单独调，三档都适用。</p>
         <div class="option-pills" data-group="glassIntensity">
+          <button type="button" class="option-pill" data-value="off">关</button>
           <button type="button" class="option-pill" data-value="standard">标准</button>
           <button type="button" class="option-pill" data-value="enhanced">更透亮</button>
         </div>
@@ -420,6 +421,6 @@
     </form>
   </div>
 
-  <script type="module" src="src/settings.js?v=3"></script>
+  <script type="module" src="src/settings.js?v=4"></script>
 </body>
 </html>

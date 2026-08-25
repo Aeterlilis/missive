@@ -1,132 +1,122 @@
-# 墨问 · ebook-handwriting-diary
+<div align="center">
 
-> **用笔在电子书屏幕上写字，停几秒，日记会用一手手写体一笔笔回答你——像一本会回应你的魔法日记。**
+<img src="web/icon.png" width="120" alt="Missive">
 
-写在电子墨水屏（BOOX / reMarkable / iPad）上的字会像墨水被纸吸走一样淡去，然后一个博学又冷幽默的"墨先生"用流畅的手写体浮现回答，再慢慢淡去。复刻自 reMarkable Paper Pro 上的 [riddle](https://github.com/MaximeRivest/riddle) 项目，硬件换成更易得的墨水屏平板，软件用网页重写。
+# Missive
 
----
+**在屏幕上写一句话，纸会把它吸走，然后用手写体一笔一笔回答你。**
 
-## 🎉 立即体验
+[**⬇ 下载 Windows 版**](../../releases/latest) · 双击安装，一路下一步
 
-在墨水屏 / iPad / 平板的浏览器打开（用笔或手指直接写）：
-
-### 👉 [**ink-diary.onrender.com**](https://ink-diary.onrender.com)
+</div>
 
 ---
 
-## 📖 怎么用（给普通用户）
+## 这是什么
 
-### BOOX 墨水屏
+一张纸，一支笔。
 
-1. 在 BOOX 的**浏览器**打开 `https://ink-diary.onrender.com`
-2. 点浏览器**菜单**（⋮）→ **添加到主屏幕**
-3. 回桌面，点新生成的"墨"字图标，**全屏打开**
-4. **等 10–20 秒**让页面加载完（首次打开字体较大，出现"用笔在这里写点什么…"的提示后就可以写了）
-5. 用笔在屏幕上写字，**停几秒**，字被吸走，回答浮现
-6. 回答停留几秒后自动淡去，可以写下一个问题
+你用鼠标、触屏或手写笔在上面写点什么，停笔几秒，写下的字会像墨水被纸吸走一样淡去。然后回答从纸面上浮现出来，一笔一笔写出来的那种，写完停一会儿，再散掉。
 
-### iPad
+屏幕上从头到尾只有纸和墨。
 
-1. 用 **Safari** 打开 `https://ink-diary.onrender.com`
-2. 点**分享按钮**（方框↑）→ **添加到主屏幕** → 添加
-3. 桌面点"墨"字图标全屏打开，用 Apple Pencil 或手指写
+## 怎么开始用
 
-> **提示**：第一次打开较慢（字体下载），从主屏幕图标第二次打开会快很多。
+**第一步：下载**
 
----
+到 [Releases 页面](../../releases/latest) 下载 `Missive-Setup-1.0.0.exe`，双击，一路下一步。装完桌面和开始菜单里都会有图标。
 
-## 🧙 它是怎么工作的
+安装到你自己的用户目录，全程不需要管理员权限。不想要了在「设置 → 应用」里正常卸载就行，写的日记会留着（存在 `%APPDATA%\Missive`，想清干净的话把这个文件夹也删掉）。
 
-```
-笔迹(压感) → 画墨迹 → 停笔几秒 → 截图存PNG
-        ↓
-发给视觉大模型(读你的手写) → 流式输出回答
-        ↓
-回答用手写字体渲染 → Zhang-Suen 细化成单像素笔迹
-        ↓
-逐笔在屏幕上"写"出来 → 停留 → 淡去
-```
+**第二步：填一次密钥**
 
-- **笔迹采集**：Pointer Events + 压感，支持电磁笔 / Apple Pencil / 手指
-- **AI 识图回答**：调用视觉大模型读你的手写，按"墨先生"人设（冷幽默 + 博学）回应
-- **手写动画**：用霞鹜文楷渲染文字 → Zhang-Suen 骨架细化 → 按书写顺序逐笔浮现
-- **屏幕自适应**：字号 / 留白 / 行数根据屏幕尺寸动态计算，不越界
+第一次打开会提示你还没配置。点右上角的**设置图标**（两根横杠、上面各卡着一个圆点的那个）进设置，最上面那张卡片填三样东西：
 
----
-
-## 🚀 自己部署（给开发者）
-
-想用自己的 API key 跑一份？三步搞定。
-
-### 1. Fork 这个仓库
-
-点右上角 **Fork**，复制到你自己的 GitHub。
-
-### 2. 部署到 Render（免费）
-
-1. 打开 [render.com](https://render.com)，用 GitHub 登录
-2. **New +** → **Web Service** → 选你的 `ink-diary` 仓库
-3. 照着填：
-
-| 字段 | 填什么 |
+| 填什么 | 说明 |
 |---|---|
-| Root Directory | `server` |
-| Build Command | `npm install` |
-| Start Command | `npm start` |
-| Instance Type | Free |
+| API 基础 URL | 服务商给你的地址，长得像 `https://xxx.com/v1` |
+| API 密钥 | 一长串以 `sk-` 开头的字符 |
+| 模型 | 选一个**能看图**的模型，比如 `gpt-4o-mini` |
 
-4. **Environment** 里添加环境变量：
+> **为什么要这一步**：写在纸上的字是靠 AI 认出来的，得有个 AI 服务才能回答你。这个服务按用量收费，所以每个人得用自己的账号——填一次，之后就一直记着了。
+>
+> 密钥在哪弄：去任意一家 OpenAI 兼容的服务商注册（OpenAI 官方、OpenRouter，或者国内的中转站都行），在后台复制出来。**模型一定要挑支持读图的**，纯文字模型认不出你写的字。
 
-| Key | Value |
-|---|---|
-| `OPENAI_API_KEY` | 你的 API key |
-| `OPENAI_BASE_URL` | OpenAI 兼容端点（如 `https://api.openai.com/v1`） |
-| `OPENAI_MODEL` | 视觉模型（如 `gpt-4o-mini`） |
+**第三步：写**
 
-5. **Create Web Service**，等 2-3 分钟构建完成
+在纸上写字 → 停笔 → 等它回你。不想手写就点笔旁边的键盘图标，打的字也会浮现在纸上。
 
-### 3. 打开
+## 能调什么
 
-部署完成后 Render 会给你一个网址，在任何设备浏览器打开就能用。`git push` 后 Render 自动重新部署。
+点右上角设置图标进去，几乎所有你能看到的东西都能改：
 
-> **本地运行**：`cd server && cp .env.example .env`（填 key）`&& npm install && npm start`，浏览器打开 `http://localhost:3000/?mouse`（`?mouse` 让鼠标也能写）
+- **纸**：宣纸、羊皮纸、皱纸、水彩、纯黑五种预设，也能传自己的图
+- **字**：五种中文字体（文楷、草书、行书、宋体、春风楷）、六种西文花体，也能传自己的 TTF
+- **笔**：平笔或尖笔，粗细、颜色随便调
+- **节奏**：你写的字停留多久才被吸走、回答停留多久才散掉
+- **颜色**：主题色、界面底色、日夜主题
+- **它怎么说话**：AI 的语气和人设可以自己写，也能一键改回默认
+
+写过的东西都存在**历史**页里，包括当时纸面的样子。
+
+## 常见问题
+
+**双击弹出蓝底的「Windows 已保护你的电脑」**
+点那行小字 **「更多信息」**，下面会出现 **「仍要运行」**，点它就行。出现这个提示是因为这个程序没有买微软的数字签名证书（一年好几千），跟安不安全无关。不放心的话代码全在这个仓库里，可以自己看、自己打包。
+
+**杀毒软件报毒 / 直接给我删了**
+同上，没有签名的安装包容易被误判。在杀毒软件里把它加进白名单，或者从回收站还原。发布之前每个版本都过了 Windows Defender 全盘扫描。
+
+**打开是黑的 / 转圈半天没反应**
+第一次启动要加载字体，等十几秒。还是不行就关掉重开一次。
+
+**写完没反应，弹出「还没配置 API」**
+密钥没填或者填错了。回设置检查那三栏，注意 URL 结尾一般要有 `/v1`。
+
+**回答说「这几笔没看清」**
+字太潦草或者太小了，写大一点。也可能是模型不支持读图，换一个带视觉的模型。
+
+**能在 iPad / 墨水屏平板上用吗**
+可以，但目前要自己跑源码（见下面）。手机 App 和平板版还在做。
+
+**我的日记会被上传吗**
+写的内容会发给你自己填的那家 AI 服务用来生成回答，这是它工作的必要条件。除此之外不往任何地方传，历史记录只存在你自己电脑上。
 
 ---
 
-## 📁 项目结构
+<details>
+<summary><b>给会写代码的人：自己跑源码</b></summary>
 
-```
-ink-diary/
-├── server/                 # Node + Express 后端
-│   ├── persona.js          # "墨先生"人设提示词
-│   ├── index.js            # 静态托管 + /interpret 流式转发
-│   └── .env.example        # 配置模板
-└── web/                    # 前端（浏览器直接加载）
-    ├── index.html          # 全屏画布 + PWA manifest
-    ├── styles.css          # 纯黑白，墨水屏优化
-    ├── fonts/LXGWWenKai.ttf# 霞鹜文楷（中英文手写体）
-    ├── lib/perfect-freehand.js
-    └── src/
-        ├── config.js       # 时序常量 + 屏幕自适应 layout()
-        ├── app.js          # 状态机主循环
-        ├── ink.js          # 笔迹采集（Pointer Events）
-        ├── capture.js      # PNG 生成 + 上传
-        ├── oracle.js       # 流式回答解析
-        ├── scribe.js       # 手写动画（Zhang-Suen + trace）
-        └── dissolve.js     # 哈希溶解淡出
+<br>
+
+```bash
+cd server
+cp .env.example .env      # 或者跑起来之后在设置页里填
+npm install
+npm start
 ```
 
-## 🔧 技术取舍
+浏览器打开 `http://localhost:3000/?mouse`（`?mouse` 让鼠标也能写字）。服务端监听 `0.0.0.0`，局域网里的平板直接开 `http://电脑IP:3000` 就能用，加到主屏幕可全屏。
 
-- **网页而非原生 App**：开发快、跨设备、换硬件不用重写
-- **Zhang-Suen 细化做手写动画**：生成单像素中线笔迹，书写感最真
-- **霞鹜文楷**：原版 Dancing Script 无中文字形，文楷开源且适合细化
-- **Responses API**：中转站限制，需用 Codex 兼容端点
+打包桌面版：根目录 `npm install && npm run dist`，产物在 `dist/Missive-Setup-<版本号>.exe`。
 
-## 🙏 致谢
+**技术栈**：Node + Express 后端，前端纯手写 JS（无框架）。手写动画的做法是把字体渲染成位图，用 Zhang-Suen 算法细化成单像素骨架，再沿骨架逐笔描出。笔迹采集走 Pointer Events + 压感，淡出用哈希溶解。
 
-核心体验设计来自 [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)（MIT）。时序常量、状态机、Zhang-Suen 手写管线均移植自该项目。
+```
+server/     index.js 后端主体 · settings.js 设置 · history.js 历史 · persona.js 默认提示词
+electron/   桌面版外壳
+web/src/    app.js 状态机 · ink.js 笔迹 · scribe.js 手写动画 · dissolve.js 淡出
+            glass.js 玻璃层 · settings.js 设置页 · history.js 历史页
+```
 
-## 📄 License
+</details>
 
-MIT
+---
+
+## 授权与致谢
+
+本项目基于 [yana108/ebook-handwriting-diary](https://github.com/yana108/ebook-handwriting-diary)（MIT）二次开发，该项目又复刻自 [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)（MIT）。核心的时序设计、状态机与手写管线来自这两个项目，在此基础上重做了界面、设置系统、历史记录与桌面版打包。
+
+预装字体各自遵循原始授权：霞鹜文楷、寒蝉春风、思源宋体、柳建毛草、钟齐志莽行等为开源字体（SIL OFL 或相应协议），西文花体来自 Google Fonts。
+
+本项目以 MIT 授权发布，详见 [LICENSE](LICENSE)。

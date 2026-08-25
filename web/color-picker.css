@@ -1,0 +1,52 @@
+/* 选色盘组件：预设色块 + HSB方形/色环自定义面板。
+   写字页笔刷颜色、设置页主题色、设置页纸张纯色背景——三处共用同一份样式，
+   靠这些 class（不是各自页面自己的 id）挂上去，保证长得一模一样，改一处三处跟着变。 */
+
+.color-presets { display: flex; gap: 6px; }
+.color-swatch {
+  appearance: none; -webkit-appearance: none;
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-color);
+  padding: 0; cursor: pointer; opacity: 0.55;
+}
+.color-swatch:hover { opacity: 0.85; }
+/* 用 box-shadow 画选中环，不用 outline——outline 在不少浏览器/WebView 上不会跟着
+   border-radius 走圆角，套在圆形色块上会变成一个方框，边角在圆外露出直线，很怪 */
+.color-swatch.active { opacity: 1; box-shadow: 0 0 0 2px var(--border-color); }
+.color-swatch-custom { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+
+.color-mode-tabs { display: flex; gap: 6px; }
+.color-mode-tab {
+  background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  color: var(--ink); border: 1px solid var(--border-color); border-color: var(--box-border-color); border-radius: 14px;
+  padding: 3px 10px; font-size: 12px; cursor: pointer; opacity: 0.55;
+}
+.color-mode-tab:hover { opacity: 0.85; }
+.color-mode-tab.active {
+  opacity: 1;
+  background: var(--accent, #000);
+  background: color-mix(in srgb, var(--accent, #000) 85%, transparent);
+  color: var(--accent-contrast, #fff);
+}
+
+.color-picker-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 162px; }
+.color-mode-square { display: flex; flex-direction: column; gap: 6px; }
+.color-picker-panel canvas {
+  width: 160px; border: 1px solid var(--border-color); border-radius: 8px; cursor: crosshair;
+  display: block; align-self: flex-start;
+  /* 不加这个的话，触屏上在选色盘拖动会被浏览器当成"划一下滚页面"的手势，选不了色——
+     告诉浏览器这块区域的触摸事件全归 JS 管，不要抢去做原生滚动/缩放 */
+  touch-action: none;
+}
+.color-wheel { border-radius: 50%; align-self: center; }
+
+/* 预览圆点 + 十六进制输入框：两个加起来跟上面画布一样宽（24px圆点 + 8px间距 + 130px输入框 = 162px），
+   输入框本身矮一截、跟 HSB/色环 那两个切换按钮同一个量级，不再撑得比画布还宽还胖。 */
+.color-panel-row { display: flex; align-items: center; gap: 8px; }
+.color-panel-row .color-swatch { cursor: default; opacity: 1; flex-shrink: 0; }
+.color-hex-input {
+  width: 130px; border: 1px solid var(--border-color); border-radius: 8px; padding: 3px 8px;
+  font: 12px/1.6 monospace; text-transform: lowercase; background: var(--box-bg); color: var(--ink);
+}

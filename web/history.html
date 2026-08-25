@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" href="icon.png" />
+  <title>Missive · 历史记录</title>
+  <link rel="stylesheet" href="chrome-theme.css" />
+  <link rel="stylesheet" href="paper-theme.css" />
+  <link rel="stylesheet" href="settings.css" />
+  <link rel="stylesheet" href="history.css" />
+  <!-- 必须排最后：里面那条 backdrop-filter 要盖掉上面各文件里的同名声明，见 glass.css -->
+  <link rel="stylesheet" href="glass.css" />
+</head>
+<body>
+  <!-- 纸张主题背景画在这一层（position:fixed，见 settings.css），列表变长的时候
+       它不跟着动，不会出现背景被拉伸的错觉 -->
+  <div id="bg-fixed"></div>
+  <div class="wrap">
+    <header>
+      <a class="icon-btn" href="index.html" title="返回日记" aria-label="返回日记"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 6 10l6 6"/></svg></a>
+      <h1>历史记录</h1>
+    </header>
+
+    <p class="hint" id="emptyHint" style="display:none">还没有写过东西，写完第一页之后会出现在这里。</p>
+    <div id="list"></div>
+  </div>
+
+  <script type="module" src="src/history.js"></script>
+</body>
+</html>

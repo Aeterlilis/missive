@@ -57,8 +57,32 @@ export function canvasToBlob(canvas) {
   });
 }
 
+// 服务返回的报错是 JSON（{error, detail}）。整串塞进 Error.message 的话，弹给用户看
+// 就是一堆花括号；这里把 error 那句话取出来，取不到再退回原文。
+// 末尾带上状态码：给人排查用，"还没配置 API（400）" 比光一句话更好定位。
+function explainHttpError(status, body) {
+  let msg = '';
+  try { msg = (JSON.parse(body) || {}).error || ''; } catch { /* 不是 JSON 就按原文处理 */ }
+  if (!msg) msg = String(body || '').trim().slice(0, 120);
+  return (msg || '没有说明原因') + `（${status}）`;
+}
+
+// fetch 自己抛出来的错 message 是 "Failed to fetch" 这类，对着用户显示等于没说。
+//
+// 措辞刻意不提"后端"：那是这一版的实现细节，而且"后端没跑"这个情况根本轮不到这里报——
+// 页面本身就是它发的，它没跑的话浏览器连页面都打不开。真正会走到这儿的是：
+//   · 页面开着的时候服务中途挂了（比如被 Ctrl+C 了）
+//   · 手机/平板通过局域网访问，WiFi 断了
+//   · 将来去服务器化之后，前端直接调 AI 接口——断网或被 CORS 挡住都长这样
+// 三种都是"这次请求没发出去"，跟有没有后端无关，所以只说这一层。
+function explainThrown(e) {
+  if (e instanceof TypeError) return '请求没能发出去，检查一下网络连接';
+  return e && e.message ? e.message : '未知错误';
+}
+
 // 把笔迹 PNG POST 到后端，返回一个流式 reader（见 oracle.js 消费）
 // 带重试：中转站偶发 403/超时，后端会重试，前端也重试以匹配。
+// 但配置类错误（4xx）不重试——密钥填错了，重试三次还是错，白等两秒。
 export async function postInterpret(blob) {
   let lastErr = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -70,23 +94,65 @@ export async function postInterpret(blob) {
       });
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
-        lastErr = new Error(`后端返回 ${res.status}: ${detail.slice(0, 120)}`);
-        // 403/500/502 可能是中转站瞬抖，重试
-        if ((res.status === 403 || res.status >= 500) && attempt < 3) {
+        lastErr = new Error(explainHttpError(res.status, detail));
+        // 403/500/502 可能是中转站瞬抖，值得重试；4xx 是配置问题，重试多少次都一样
+        lastErr.retryable = res.status === 403 || res.status >= 500;
+        if (lastErr.retryable && attempt < 3) {
           await new Promise((r) => setTimeout(r, 600 * attempt));
           continue;
         }
         throw lastErr;
       }
-      if (!res.body) throw new Error('后端未返回流');
+      if (!res.body) throw new Error('没有收到回答的内容');
       return res.body;
     } catch (e) {
       lastErr = e;
+      if (e.retryable === false) throw e;   // 配置错了，重试多少次都一样
       if (attempt < 3) {
         await new Promise((r) => setTimeout(r, 600 * attempt));
         continue;
       }
-      throw e;
+      // 带 retryable 的是上面按状态码造的，已经是人话了；没有这个标记的是 fetch
+      // 自己抛的（"Failed to fetch"），得翻一道再往上抛
+      throw e.retryable === undefined ? new Error(explainThrown(e)) : e;
+    }
+  }
+  throw lastErr || new Error('多次重试后仍失败');
+}
+
+// 打字模式：把文字 POST 到 /interpret-text（JSON body），返回值和 postInterpret 一样是流式 reader
+export async function postInterpretText(text) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch('/interpret-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        lastErr = new Error(explainHttpError(res.status, detail));
+        // 403/500/502 可能是中转站瞬抖，值得重试；4xx 是配置问题，重试多少次都一样
+        lastErr.retryable = res.status === 403 || res.status >= 500;
+        if (lastErr.retryable && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 600 * attempt));
+          continue;
+        }
+        throw lastErr;
+      }
+      if (!res.body) throw new Error('没有收到回答的内容');
+      return res.body;
+    } catch (e) {
+      lastErr = e;
+      if (e.retryable === false) throw e;   // 配置错了，重试多少次都一样
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 600 * attempt));
+        continue;
+      }
+      // 带 retryable 的是上面按状态码造的，已经是人话了；没有这个标记的是 fetch
+      // 自己抛的（"Failed to fetch"），得翻一道再往上抛
+      throw e.retryable === undefined ? new Error(explainThrown(e)) : e;
     }
   }
   throw lastErr || new Error('多次重试后仍失败');

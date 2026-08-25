@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 启动脚本：自动定位系统 CA 证书包，解决 Node 报 "unable to get local issuer certificate" 的问题。
 # （Node 默认不读系统证书库；在部分环境里 HTTPS 全部因此失败。）
-# 然后启动 ink-diary 后端。
+# 然后启动 Missive 后端。
 #
 # 用法：  ./start.sh     或   npm start
 
@@ -24,7 +24,7 @@ done
 
 # 若还没找到，且系统有 security 工具（macOS），尝试从 Keychain 导出
 if [ -z "$NODE_EXTRA_CA_CERTS" ] && command -v security >/dev/null 2>&1; then
-  TMP_CA="$(mktemp -t inkdiary-cacert)"
+  TMP_CA="$(mktemp -t missive-cacert)"
   if security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain >"$TMP_CA" 2>/dev/null && [ -s "$TMP_CA" ]; then
     export NODE_EXTRA_CA_CERTS="$TMP_CA"
   else

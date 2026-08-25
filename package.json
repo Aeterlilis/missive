@@ -1,0 +1,52 @@
+{
+  "name": "missive-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Missive 桌面版",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.aeterlilis.missive",
+    "productName": "Missive",
+    "files": [
+      "electron/**/*",
+      "server/**/*",
+      "web/**/*",
+      "!server/.env",
+      "!server/.env.example",
+      "!server/settings.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "Missive-Setup-${version}.exe",
+      "language": "2052",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Missive",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "uninstallDisplayName": "Missive",
+      "deleteAppDataOnUninstall": false
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}

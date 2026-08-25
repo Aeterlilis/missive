@@ -22,9 +22,19 @@ export class InkLayer {
     this._pressureSeenVariance = false;
     this._lastPressure = 0.5;
 
+    // 撤销掉的笔画暂存在这儿等着重做。落下新的一笔就清空——分支掉的历史留着只会
+    // 让"重做"还原出一笔跟当前画面对不上的东西。
+    this.redoStack = [];
+
+    // 多指手势的记账：屏幕上还剩哪几根手指、这一轮最多同时几根、中途有没有被划动弄脏
+    this._touches = new Map();
+    this._gestureMax = 0;
+    this._gestureSpoiled = false;
+
     this.onStrokeStart = null; // 回调：开始新笔画
     this.onStrokeAdd = null;   // 回调：当前笔画新增点（用于 idle 计时器刷新）
     this.onStrokeEnd = null;   // 回调：抬笔
+    this.onGesture = null;     // 回调：多指手势，参数是 'undo' 或 'redo'
   }
 
   // 监听画布上的指针事件
@@ -67,7 +77,61 @@ export class InkLayer {
     return Math.max(p, CONFIG.PEN_PRESSURE_FLOOR);
   }
 
+  // ─── 多指手势：两指轻点撤销、三指轻点重做 ───────────────
+  // 手势只认手指。笔和鼠标永远是在写字——两根手指同时点屏幕不可能是在写字，
+  // 这就是它不跟笔迹打架的原因（双击就会：中文的"点"这一笔跟轻点无法区分）。
+  // 记账放在 _accept 之前：防误触模式下手指不能写字，但手势照样该管用。
+  _gestureDown(e) {
+    if (e.pointerType !== 'touch') return false;
+    this._touches.set(e.pointerId, { t: performance.now(), x: e.clientX, y: e.clientY });
+    if (this._touches.size > this._gestureMax) this._gestureMax = this._touches.size;
+    if (this._touches.size >= 2) {
+      // 第二根手指落下时第一根多半已经起了一笔。丢掉它，否则每做一次手势
+      // 纸上都会多个点。
+      this._abortCurrent();
+      return true;
+    }
+    return false;
+  }
+
+  _gestureMove(e) {
+    const rec = this._touches.get(e.pointerId);
+    if (!rec) return;
+    if (Math.hypot(e.clientX - rec.x, e.clientY - rec.y) > CONFIG.TAP_GESTURE_SLOP_PX) {
+      this._gestureSpoiled = true; // 划动过就不算"轻点"，可能是想写字或误碰
+    }
+  }
+
+  // 返回 true 表示这个抬起属于手势，写字逻辑不要再处理它
+  _gestureUp(e) {
+    const rec = this._touches.get(e.pointerId);
+    if (!rec) return false;
+    this._touches.delete(e.pointerId);
+    if (performance.now() - rec.t > CONFIG.TAP_GESTURE_MS) this._gestureSpoiled = true;
+    if (this._touches.size > 0) return this._gestureMax >= 2; // 还有手指没抬，等抬完再判
+    const n = this._gestureMax;
+    const spoiled = this._gestureSpoiled;
+    this._gestureMax = 0;
+    this._gestureSpoiled = false;
+    if (n < 2) return false; // 单指：本来就是写字，交回去
+    if (!spoiled) {
+      if (n === 2) this.onGesture?.('undo');
+      else if (n === 3) this.onGesture?.('redo');
+      // 四指以上不给含义：手掌整个搭上去也会凑出好几个触点，别乱猜
+    }
+    return true;
+  }
+
+  // 丢掉正在画的这一笔并把它从画布上擦掉
+  _abortCurrent() {
+    if (!this.drawing) return;
+    this.drawing = false;
+    this.currentStroke = [];
+    this._redrawAll();
+  }
+
   _onDown(e) {
+    if (this._gestureDown(e)) return;
     if (!this._accept(e)) return;
     e.preventDefault();
     try { this.canvas.setPointerCapture(e.pointerId); } catch {}
@@ -83,6 +147,8 @@ export class InkLayer {
   }
 
   _onMove(e) {
+    this._gestureMove(e);
+    if (this._touches.size >= 2) return; // 手势进行中，不画
     if (!this.drawing || !this._accept(e)) return;
     e.preventDefault();
     const pts = this._coalesced(e);
@@ -93,6 +159,7 @@ export class InkLayer {
   }
 
   _onUp(e) {
+    if (this._gestureUp(e)) return;
     if (!this.drawing) return;
     e.preventDefault();
     try { this.canvas.releasePointerCapture(e.pointerId); } catch {}
@@ -100,6 +167,7 @@ export class InkLayer {
     if (this.currentStroke.length > 1) {
       this.strokes.push(this.currentStroke);
       this.strokeBrush.push(this._snapshotBrush());
+      this.redoStack.length = 0; // 落了新的一笔，之前撤销掉的就回不去了
     }
     this.currentStroke = [];
     this.onStrokeEnd?.();
@@ -253,6 +321,7 @@ export class InkLayer {
     this.strokes = [];
     this.strokeBrush = [];
     this.currentStroke = [];
+    this.redoStack.length = 0;
   }
 
   // 清空所有笔画并把画布也擦干净。跟 clear() 的区别只在于立刻重绘一次——
@@ -265,8 +334,18 @@ export class InkLayer {
   // 撤销最后一笔：写字写错很常见，撤销比整页清空更常用
   undo() {
     if (this.strokes.length === 0) return false;
-    this.strokes.pop();
-    this.strokeBrush.pop();
+    this.redoStack.push({ stroke: this.strokes.pop(), brush: this.strokeBrush.pop() });
+    this._redrawAll();
+    return true;
+  }
+
+  // 重做：把最近撤销掉的那一笔放回去。连同当时的笔刷快照一起还原，
+  // 撤销之后换过笔刷也不会把还原回来的这一笔画成新笔刷的样子。
+  redo() {
+    const item = this.redoStack.pop();
+    if (!item) return false;
+    this.strokes.push(item.stroke);
+    this.strokeBrush.push(item.brush);
     this._redrawAll();
     return true;
   }

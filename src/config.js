@@ -15,6 +15,12 @@ export const CONFIG = {
   DRINK_LINGER_MS: 2000,
   DRINK_FADE_MS: 900,
 
+  // ─── 多指手势（两指轻点撤销 / 三指轻点重做）────────
+  // 超过这个时长或移动超过这个距离就不算"轻点"，手势作废——避免把按住不动、
+  // 或者手掌蹭一下当成撤销
+  TAP_GESTURE_MS: 400,
+  TAP_GESTURE_SLOP_PX: 14,
+
   // ─── 思考（呼吸点）──────────────────────────────
   THINK_PULSE_MS: 600,
 

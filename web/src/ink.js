@@ -111,7 +111,9 @@ export class InkLayer {
     return {
       color: CONFIG.INK_COLOR,
       size: CONFIG.BRUSH_SIZE,
-      params: CONFIG.BRUSH_PARAMS,
+      // 拷贝而不是存引用：面板上的笔尖角度是就地改 CONFIG.BRUSH_PARAMS 的，存引用的话
+      // 调一次角度会把纸上所有旧笔画一起转过去。
+      params: { ...CONFIG.BRUSH_PARAMS },
       simulatePressure: !this._pressureSeenVariance,
     };
   }

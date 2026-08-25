@@ -194,10 +194,28 @@ export class InkLayer {
     ctx.globalAlpha = b.params.alpha ?? 1;
     ctx.fillStyle = b.color;
     ctx.beginPath();
-    ctx.moveTo(path[0].x + dx, path[0].y + dy);
-    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x + dx, path[i].y + dy);
-    for (let i = path.length - 1; i >= 0; i--) ctx.lineTo(path[i].x - dx, path[i].y - dy);
-    ctx.closePath();
+    // 一段一个四边形，而不是整笔一个大多边形。整笔一个的话，笔迹只要自己穿过自己
+    // （草书、写"o"这类绕圈的笔画），那个多边形就会自交，nonzero 规则下绕行方向相反
+    // 的两块叠在一起会互相抵消，交叉处被抠成白洞。
+    // 拆成小段还不够：每段四边形的绕行方向取决于这一段的走向跟笔尖的夹角，走向一变
+    // 方向就反过来，照样会抵消。所以逐个把绕行方向统一（面积为负就反过来串），叠加
+    // 才只会加深不会相消。
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1], c = path[i];
+      const quad = [
+        [a.x + dx, a.y + dy], [c.x + dx, c.y + dy],
+        [c.x - dx, c.y - dy], [a.x - dx, a.y - dy],
+      ];
+      let area = 0;
+      for (let k = 0; k < 4; k++) {
+        const [x1, y1] = quad[k], [x2, y2] = quad[(k + 1) % 4];
+        area += x1 * y2 - x2 * y1;
+      }
+      if (area < 0) quad.reverse();
+      ctx.moveTo(quad[0][0], quad[0][1]);
+      for (let k = 1; k < 4; k++) ctx.lineTo(quad[k][0], quad[k][1]);
+      ctx.closePath();
+    }
     ctx.fill();
     ctx.globalAlpha = 1;
   }

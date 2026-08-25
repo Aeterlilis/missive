@@ -156,6 +156,29 @@ h2 {
 }
 h3 { font-size: 13px; font-weight: 600; opacity: 0.85; margin-bottom: 8px; }
 
+/* 外观那一栏的分组标题（"文字排版"/"界面外观"）。比设置项标题大一级，底下压一道细线，
+   一眼看得出哪几项是一伙的。只有外观用得上——那一栏里文字和界面本来就是两回事。 */
+h3.group-title {
+  font-size: 14px;
+  opacity: 1;
+  margin-top: 30px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+h2 + h3.group-title { margin-top: 0; }
+
+/* 分组里的设置项标题。跟别的栏目里的 h3 长得一模一样，只是层级低一档；
+   项与项之间的间距统一在这里给，不再逐个写 style="margin-top:…"。 */
+h4 {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+h3.group-title + h4 { margin-top: 0; }
+
 .hint {
   font-size: 13px;
   opacity: 0.6;

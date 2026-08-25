@@ -29,6 +29,7 @@
     <a href="#sec-system-prompt">系统提示词</a>
     <a href="#sec-persona">人设</a>
     <a href="#sec-memory">记忆</a>
+    <a href="#sec-hint">首屏提示</a>
     <a href="#sec-appearance">外观</a>
     <a href="#sec-motion">动效</a>
     <a href="#sec-other">其他设置</a>
@@ -119,10 +120,24 @@
         </div>
       </section>
 
+      <section id="sec-hint">
+        <h2>首屏提示文字</h2>
+        <p class="hint">开屏页面引导语，会像回答一样一笔一笔写出来，可以换行。每天在所有开启状态的卡片中随机显示一张。</p>
+        <div class="card-group" data-group="hint">
+          <div class="card-group-head">
+            <span class="card-group-title">提示语列表</span>
+            <button type="button" class="add-btn" data-add="hint" title="新建">＋</button>
+          </div>
+          <div class="card-stack" data-stack="hint"></div>
+        </div>
+      </section>
+
       <section id="sec-appearance">
         <h2>外观</h2>
 
-        <h3>英文回答字体</h3>
+        <h3 class="group-title">文字排版</h3>
+
+        <h4>英文回答字体</h4>
         <div class="option-pills" data-group="font">
           <button type="button" class="option-pill" data-value="pinyon">花体连笔</button>
           <button type="button" class="option-pill" data-value="medieval">西幻哥特</button>
@@ -132,7 +147,7 @@
           <button type="button" class="option-pill" data-value="mysoul">俏皮手写</button>
         </div>
 
-        <h3 style="margin-top:20px">中文回答字体</h3>
+        <h4>中文回答字体</h4>
         <p class="hint"></p>
         <div class="option-pills" data-group="cjkFont">
           <button type="button" class="option-pill" data-value="default">霞鹜文楷</button>
@@ -148,17 +163,25 @@
           <button type="button" id="cjkFontSystemUse" class="secondary small">使用这个</button>
         </div>
 
-        <h3 style="margin-top:20px">首屏提示文字</h3>
-        <p class="hint">开屏页面引导语，会像回答一样一笔一笔写出来，可以换行。每天在所有开启状态的卡片中随机显示一张。</p>
-        <div class="card-group" data-group="hint">
-          <div class="card-group-head">
-            <span class="card-group-title">提示语列表</span>
-            <button type="button" class="add-btn" data-add="hint" title="新建">＋</button>
-          </div>
-          <div class="card-stack" data-stack="hint"></div>
+        <h4>回复字号</h4>
+        <p class="hint">AI 回复浮现在纸上时的大小。字号本身会随屏幕宽度自适应，这里是在此基础上整体调大调小。</p>
+        <div class="slider-row">
+          <span>小</span>
+          <input type="range" id="replyFontScale" min="0.5" max="1.5" step="0.05" />
+          <span>大</span>
         </div>
 
-        <h3 style="margin-top:20px">纸张背景</h3>
+        <h4>文字对齐</h4>
+        <p class="hint">纸上文字的水平对齐方式，AI 回复和打字输入的内容都按这个来。</p>
+        <div class="option-pills" data-group="replyAlign">
+          <button type="button" class="option-pill" data-value="left">左对齐</button>
+          <button type="button" class="option-pill" data-value="center">居中</button>
+          <button type="button" class="option-pill" data-value="right">右对齐</button>
+        </div>
+
+        <h3 class="group-title">界面外观</h3>
+
+        <h4>纸张背景</h4>
         <div class="option-pills" data-group="theme">
           <button type="button" class="option-pill" data-value="parchment">羊皮纸</button>
           <button type="button" class="option-pill" data-value="lined">横格本</button>
@@ -198,7 +221,7 @@
           </div>
         </div>
 
-        <h3 style="margin-top:20px">主题色</h3>
+        <h4>主题色</h4>
         <p class="hint"></p>
         <div id="theme-color-presets" class="color-presets">
           <button type="button" class="color-swatch" data-color="#000000" title="曜石黑" style="background:#000000"></button>
@@ -224,38 +247,7 @@
           </div>
         </div>
 
-        <h3 style="margin-top:20px">界面配色</h3>
-        <p class="hint"></p>
-        <div class="option-pills" data-group="chromeTheme">
-          <button type="button" class="option-pill" data-value="day">白天</button>
-          <button type="button" class="option-pill" data-value="night">夜间</button>
-          <button type="button" class="option-pill" data-value="custom">自定义</button>
-        </div>
-
-        <h3 style="margin-top:16px">文字对齐</h3>
-        <p class="hint">纸上文字的水平对齐方式，AI 回复和打字输入的内容都按这个来。</p>
-        <div class="option-pills" data-group="replyAlign">
-          <button type="button" class="option-pill" data-value="left">左对齐</button>
-          <button type="button" class="option-pill" data-value="center">居中</button>
-          <button type="button" class="option-pill" data-value="right">右对齐</button>
-        </div>
-
-        <h3 style="margin-top:16px">回复字号</h3>
-        <p class="hint">AI 回复浮现在纸上时的大小。字号本身会随屏幕宽度自适应，这里是在此基础上整体调大调小。</p>
-        <div class="slider-row">
-          <span>小</span>
-          <input type="range" id="replyFontScale" min="0.5" max="1.5" step="0.05" />
-          <span>大</span>
-        </div>
-
-        <h3 style="margin-top:16px">工具栏位置</h3>
-        <p class="hint">写字页工具栏的位置。左上竖排接近绘画软件的习惯，底部居中在手机上更便于单手操作。</p>
-        <div class="option-pills" data-group="toolbarPosition">
-          <button type="button" class="option-pill" data-value="left">左上竖排</button>
-          <button type="button" class="option-pill" data-value="bottom">底部居中</button>
-        </div>
-
-        <h3 style="margin-top:16px">玻璃强度</h3>
+        <h4>玻璃强度</h4>
         <p class="hint" id="glass-intensity-hint">关闭后只剩底色和边框，没有模糊；标准是普通毛玻璃；"更透亮"更清透，支持的设备上还会有轻微的折射扭曲。底色的透明度在"界面配色"的自定义里单独调，三档都适用。</p>
         <div class="option-pills" data-group="glassIntensity">
           <button type="button" class="option-pill" data-value="off">关</button>
@@ -263,8 +255,23 @@
           <button type="button" class="option-pill" data-value="enhanced">更透亮</button>
         </div>
 
+        <h4>工具栏位置</h4>
+        <p class="hint">写字页工具栏的位置。左上竖排接近绘画软件的习惯，底部居中在手机上更便于单手操作。</p>
+        <div class="option-pills" data-group="toolbarPosition">
+          <button type="button" class="option-pill" data-value="left">左上竖排</button>
+          <button type="button" class="option-pill" data-value="bottom">底部居中</button>
+        </div>
+
+        <h4>界面配色</h4>
+        <p class="hint"></p>
+        <div class="option-pills" data-group="chromeTheme">
+          <button type="button" class="option-pill" data-value="day">白天</button>
+          <button type="button" class="option-pill" data-value="night">夜间</button>
+          <button type="button" class="option-pill" data-value="custom">自定义</button>
+        </div>
+
         <div id="chrome-theme-custom" class="hidden">
-          <h3 style="margin-top:16px">底色</h3>
+          <h4>底色</h4>
           <div id="chrome-box-presets" class="color-presets">
             <button type="button" class="color-swatch" data-color="#cccccc" title="曜石黑" style="background:#cccccc"></button>
             <button type="button" class="color-swatch" data-color="#b5c4e4" title="藏青" style="background:#b5c4e4"></button>
@@ -289,14 +296,14 @@
             </div>
           </div>
 
-          <h3 style="margin-top:16px">底色透明度</h3>
+          <h4>底色透明度</h4>
           <div class="slider-row">
             <span>透</span>
             <input type="range" id="chromeBoxAlpha" min="0.05" max="1" step="0.01" />
             <span>实</span>
           </div>
 
-          <h3 style="margin-top:16px">文字颜色</h3>
+          <h4>文字颜色</h4>
           <div id="chrome-ink-presets" class="color-presets">
             <button type="button" class="color-swatch" data-color="#000000" title="纯黑" style="background:#000000"></button>
             <button type="button" class="color-swatch" data-color="#ffffff" title="纯白" style="background:#ffffff"></button>
@@ -318,7 +325,7 @@
             </div>
           </div>
 
-          <h3 style="margin-top:16px">边框颜色</h3>
+          <h4>边框颜色</h4>
           <p class="hint"></p>
           <div id="chrome-border-presets" class="color-presets">
             <button type="button" class="color-swatch" data-color="#000000" title="纯黑" style="background:#000000"></button>
@@ -341,7 +348,7 @@
             </div>
           </div>
 
-          <h3 style="margin-top:16px">边框透明度</h3>
+          <h4>边框透明度</h4>
           <div class="slider-row">
             <span>透</span>
             <input type="range" id="chromeBorderAlpha" min="0.05" max="1" step="0.01" />
@@ -421,6 +428,6 @@
     </form>
   </div>
 
-  <script type="module" src="src/settings.js?v=4"></script>
+  <script type="module" src="src/settings.js?v=5"></script>
 </body>
 </html>

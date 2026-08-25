@@ -1,8 +1,12 @@
 // dissolve.js —— 哈希溶解淡出："纸把墨吸走"
 // 移植自 riddle 的 ink::dissolve_pass + px_hash：
 //   每个墨迹像素有一个固定的伪随机哈希值；第 k 轮溶解时，
-//   hash(x,y) % STAGES <= k 的像素被擦白。STAGES 轮后区域全白。
-//   比线性 alpha 渐变更适合墨水屏：始终是纯黑白，没有灰度残影。
+//   hash(x,y) % STAGES <= k 的像素被擦成透明。STAGES 轮后区域全透明。
+//   比线性 alpha 渐变更适合墨水屏：始终是纯黑或透明，没有灰度残影。
+//
+// 画布本身是透明的（背景色/纹理是 CSS 画在 canvas 下面的），所以这里认"墨迹"
+// 靠 alpha 通道而不是亮度——不管背景是白纸、牛皮纸还是米黄色，判断逻辑都一样，
+// "擦掉"也统一变成 alpha=0，露出底下的背景，而不是画死一块白色盖上去。
 
 import { CONFIG } from './config.js';
 
@@ -20,13 +24,12 @@ export function dissolvePass(ctx, bbox, stage, stages = CONFIG.DRINK_STAGES) {
   for (let py = 0; py < h; py++) {
     for (let px = 0; px < w; px++) {
       const i = (py * w + px) * 4;
-      // 只处理偏暗（墨迹）像素
-      const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-      if (lum < 250) {
+      // 只处理有墨迹的像素（alpha>0），画布背景本身是全透明的
+      if (d[i + 3] > 0) {
         // 绝对坐标参与哈希，保证每轮判定稳定
         const h4 = pxHash(x + px, y + py);
         if (h4 % stages <= stage) {
-          d[i] = d[i + 1] = d[i + 2] = 255;
+          d[i] = d[i + 1] = d[i + 2] = d[i + 3] = 0; // 擦成透明，露出底下的纸
         } else {
           inkLeft = true;
         }
@@ -46,8 +49,7 @@ function pxHash(x, y) {
   return h >>> 0;
 }
 
-// 把一块区域整块擦白（用于饮墨完成后的兜底清理、或回答淡出后整页清屏）
+// 把一块区域整块擦透明（用于饮墨完成后的兜底清理、或回答淡出后整页清屏）
 export function clearRegion(ctx, bbox) {
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
+  ctx.clearRect(bbox.minX, bbox.minY, bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
 }

@@ -1,0 +1,32 @@
+/* 滑块统一样式：写字页笔刷粗细 + 设置页所有时长/透明度滑块共用（跟 color-picker.css 一个道理，
+   靠这几个 class 挂上去，不用管各页面各自的 id）。
+
+   原生 <input type="range"> 在触屏上点轨道任意位置就直接跳值，划页面时手指扫过滑块很容易被
+   当成一次拖动误触发。试过在 pointerdown 时判断按下位置离手柄够不够近、不够近就
+   preventDefault()，但手机上实测拦不住——原生的"点哪跳哪"是在这个 JS 判断跑起来之前就已经
+   生效了。所以干脆把原生 input 整个变成不接收指针事件（pointer-events:none，只留着当
+   min/max/step/value 的数据容器，'input'/'change' 事件照常派发，外面读 el.value 的代码不用
+   改），自己在上面画一套轨道+进度条+手柄，只有手柄这个小圆点能收触摸——轨道物理上根本点
+   不了，不可能再跳值。见 settings.js/app.js 里的 enhanceRangeSlider()。 */
+
+.mslider { position: relative; flex: 1; height: 22px; touch-action: pan-y; }
+.mslider input[type="range"] {
+  position: absolute; inset: 0; margin: 0; width: 100%; height: 100%;
+  opacity: 0; pointer-events: none;
+}
+.mslider-track {
+  position: absolute; left: 0; right: 0; top: 50%; height: 4px; border-radius: 2px;
+  transform: translateY(-50%); background: var(--border-color); opacity: 0.35;
+}
+/* 手柄左边（已经拖到的部分）填主题色，右边留空显出下面淡淡的 .mslider-track —— 一眼能看出
+   拖到哪了，不然浅色背景下手柄不够显眼。 */
+.mslider-fill {
+  position: absolute; left: 0; top: 50%; height: 4px; border-radius: 2px;
+  transform: translateY(-50%); background: var(--accent); width: 0;
+}
+.mslider-thumb {
+  position: absolute; top: 50%; left: 0; width: 22px; height: 22px; border-radius: 50%;
+  transform: translate(-50%, -50%); background: var(--accent);
+  border: 2px solid var(--box-solid); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  touch-action: none; cursor: pointer;
+}

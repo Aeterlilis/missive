@@ -1,0 +1,128 @@
+/* 历史页没有分区导航，settings.css 给 .wrap 留的顶部空间是按"header+导航"两层算的，
+   这里只有一层 header，改窄一点；横屏那份同理，也不需要给导航栏留左边距 */
+.wrap { padding-top: 74px; }
+@media (orientation: landscape) {
+  .wrap { padding-top: 74px; padding-left: 20px; max-width: 900px; }
+}
+
+/* 一次"对话"一张卡：默认只显示头部（首页缩略图+日期+页数），点开才展开这次对话写的所有页。
+   跟设置页的 .card 一样是"外层大框"，要玻璃效果；条目本身没有嵌套输入框那种"内层小框"问题。 */
+.conv-card {
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  border-color: var(--box-border-color);
+}
+
+.conv-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.conv-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  background: var(--box-solid);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.conv-main { flex: 1; min-width: 0; }
+.conv-date { font-size: 14px; font-weight: 600; }
+.conv-count { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+.conv-chevron { font-size: 12px; opacity: 0.45; flex-shrink: 0; }
+.conv-card.open .conv-chevron { opacity: 0.8; }
+
+.conv-body { display: none; border-top: 1px solid #000; }
+.conv-card.open .conv-body { display: block; }
+
+/* 对话展开后里面的每一页不再单独画框（避免卡片嵌套卡片），
+   用底部一条细分隔线区分就够了 */
+.entry {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ink-faint);
+}
+.entry:last-child { border-bottom: none; }
+
+.entry-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.entry-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  background: var(--box-solid);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.entry-main { flex: 1; min-width: 0; }
+
+.entry-date {
+  font-size: 12px;
+  opacity: 0.55;
+  margin-bottom: 2px;
+}
+
+.entry-snippet {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry-detail {
+  display: none;
+  position: relative;
+  padding: 10px 0 40px;
+}
+.entry.open .entry-detail { display: block; }
+
+.entry-detail img {
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: var(--box-solid);
+}
+
+.entry-detail .reply {
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  margin-bottom: 12px;
+}
+
+/* 跟设置页卡片的删除按钮同款：圆形、收在右下角、半透明红 */
+.entry-delete {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(192, 57, 43, 0.55);
+  border: 1px solid #7a2117;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.entry-delete:hover { background: rgba(192, 57, 43, 0.85); }
+.entry-delete svg { width: 14px; height: 14px; }

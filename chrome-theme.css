@@ -1,0 +1,49 @@
+/* 界面配色：所有"框框"（卡片/面板/按钮/输入框……）共用的颜色变量，
+   写字页/设置页/历史页三处一起载入。真正的值由各页面的 JS 在拉到设置后用内联 style 覆盖
+   （见 settings.js 的 applyChromeTheme，app.js/history.js 各有一份小号同款），
+   这里只是没读到设置前的默认值，避免闪一下没样式的白屏。
+   --box-bg 是半透明的（卡片/面板底色，颜色+透明度都可调）；--box-solid 是同一个颜色但不透明，
+   给缩略图底板、按钮悬浮反色这类必须不透明的地方用。--ink-faint 同理是 --ink 的极淡版，给细分隔线用。
+   --ink 只管文字/图标颜色；--border-color 单独管所有边框颜色（颜色+透明度也都可调）——
+   两个故意拆开，不然边框调淡了文字也会跟着变淡看不清，见 settings.js 的 applyBorderColor。 */
+:root {
+  --ink: #000000;
+  --ink-faint: rgba(0, 0, 0, 0.15);
+  --border-color: #000000;
+  --box-bg: rgba(255, 255, 255, 0.55);
+  --box-solid: #ffffff;
+  /* 设置/历史页整页那层半透明遮罩（body::before）用这个，颜色跟 --box-bg 一样是底色，
+     但透明度固定（不跟着底色透明度滑块联动）——遮罩和卡片/按钮是两件事，用户不想调一个
+     底色透明度就连遮罩浓淡也跟着变，见 settings.js 的 applyChromeTheme。 */
+  --veil-bg: rgba(255, 255, 255, 0.12);
+  /* 毛玻璃：模糊+提高饱和度，垫在半透明底色下面的纸张纹理透出来的时候不再是纯色块，
+     而是糊成一片有质感的背景色。写字页/设置页/历史页三处的 var(--box-bg) 都配了这个
+     （普通手机/平板/电脑屏幕，不是墨水屏，不用顾虑模糊特效的兼容性）。
+     这里全是"标准"档的值，也就是没读到设置前的样子。"更透亮"档把它们整套换掉，
+     还会多出一个逐元素的边缘倒影——四样东西各是什么、为什么这么调，见 src/glass.js。 */
+  --box-blur: blur(16px) saturate(1.6);
+  /* 边缘高光/暗角（inset box-shadow） */
+  --box-rim: none;
+  /* 边缘倒影的滤镜，"更透亮"档由 glass.js 按元素逐个写成内联变量，这里是"没有"。
+     值是空的（不是 none）——它拼在 backdrop-filter 里当前缀用，写 none 会让整条失效。
+     必须在这儿声明出来：glass.css 里是 var(--box-lens) 而不是 var(--box-lens, )，
+     后者那种空 fallback 的写法 Safari 会判成非法，一路把 backdrop-filter 整条丢掉，
+     连模糊都不剩。 */
+  --box-lens: ;
+  /* 玻璃表面的反光，叠在 --box-bg 上面的几层渐变（规则在 glass.css） */
+  --box-sheen: none;
+  /* 贴着轮廓那一圈高饱和亮边的宽度和滤镜（规则同在 glass.css）。
+     mask 的 135° 渐变让这圈在左上/右下最亮、中间淡下去，跟 --box-rim 的光源方向一致，
+     两档共用同一条，所以放在这儿而不是跟着档位换。 */
+  --box-band-w: 0px;
+  --box-band-filter: none;
+  --box-band-mask: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.32) 50%, #fff);
+  /* 玻璃元素的边框颜色（history.css/settings.css/color-picker.css 里那些 border-color 声明用的
+     是这个，不是直接用 --border-color）。曾经在"更透亮"档会自动淡化，现在边框透明度完全交给
+     用户自己在设置页调（见 applyBorderColor），这里就是原样等于 --border-color，留这层间接
+     只是为了以后如果还要给玻璃元素单独覆盖边框颜色，不用再去改 17 处 CSS。 */
+  --box-border-color: var(--border-color);
+  /* 贴在主题色(--accent)底上的文字/图标该用黑还是白，根据主题色本身明暗算出来的，见 settings.js
+     的 pickContrastColor/applyThemeColor——主题色能自定义成浅色，写死白字会看不清。 */
+  --accent-contrast: #ffffff;
+}

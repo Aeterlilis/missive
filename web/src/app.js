@@ -299,6 +299,12 @@ class App {
     };
     this.ink.onStrokeAdd = () => { this.lastInputAt = performance.now(); };
     this.ink.onStrokeEnd = () => { this.lastInputAt = performance.now(); };
+    // 两指/三指轻点。也当成一次输入，免得刚撤销完就被"停笔够久自动发送"抢走
+    this.ink.onGesture = (kind) => {
+      this.lastInputAt = performance.now();
+      if (kind === 'undo') this.undoLastStroke();
+      else if (kind === 'redo') this.redoLastStroke();
+    };
   }
 
   // ─── 主循环 ────────────────────────────────────
@@ -349,6 +355,11 @@ class App {
   undoLastStroke() {
     if (this.state !== S.LISTENING) return;
     this.ink.undo();
+  }
+
+  redoLastStroke() {
+    if (this.state !== S.LISTENING) return;
+    this.ink.redo();
   }
 
   // 一键清空这一页的笔迹，跟撤销一样只在还没提交时有意义。
@@ -1643,11 +1654,18 @@ function bindToolbar(app) {
     }
   });
 
-  // 桌面端小彩蛋：Ctrl+Z 撤销
+  // 桌面端快捷键：Ctrl+Z 撤销，Ctrl+Shift+Z / Ctrl+Y 重做
+  // 比较小写：开着大写锁定或按住 Shift 时 e.key 是 'Z'，只认小写会时灵时不灵
   window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && overlay.classList.contains('hidden')) {
+    if (!overlay.classList.contains('hidden')) return; // 打字框开着时让输入框自己处理
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) {
       e.preventDefault();
       app.undoLastStroke();
+    } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+      e.preventDefault();
+      app.redoLastStroke();
     }
   });
 }

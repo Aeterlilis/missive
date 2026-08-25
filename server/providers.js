@@ -213,7 +213,14 @@ const geminiSpec = {
         return { inline_data: { mime_type: mediaType, data } };
       }),
     })),
-    generationConfig: { maxOutputTokens: ir.maxTokens },
+    generationConfig: {
+      maxOutputTokens: ir.maxTokens,
+      // 2.5 系的 flash 默认开思考，而思考的 token 也算进 maxOutputTokens——这个应用的
+      // 上限只有几百 token，很容易全花在思考上、正文一个字都不剩。关掉。
+      // 只对 flash 系列关：2.5-pro 关不掉（最低预算 128），传 0 会直接 400；
+      // 更老的型号根本不认这个字段。
+      ...(/gemini-2\.5-flash/i.test(ir.model || '') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+    },
   }),
   delta: (block) => {
     const { data } = readSseBlock(block);

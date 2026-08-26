@@ -97,9 +97,13 @@ function defaultsWithProfile() {
     confirmOnReset: true,    // 点重置对话时弹框问要不要先总结成长期记忆。关掉就直接重置、不总结——
                              // 总结要花一次 API 调用还得等，不该在没问过的情况下发生
     brush: {
-      preset: 'pen',      // pen | ballpoint | marker | brush
+      preset: 'pen',      // pen | ballpoint | marker | brush | flat | pointed
       size: 7,
       color: '#000000',
+      // 每支笔各自被调过的粗细/笔尖角度，形如 { flat: { size: 16, nibAngleDeg: 30 } }。
+      // 没调过的笔不在这里，取预设自带的默认值（见 web/src/config.js 的 BRUSH_PRESETS）。
+      // 顶层的 size 是"当前这支笔"的，留着给旧版本读。
+      byPreset: {},
     },
   };
 }

@@ -348,9 +348,14 @@ body.toolbar-bottom #confirm-box.at-toolbar {
   align-items: stretch;
   gap: 12px;
 }
-/* .mslider 自带的 flex:1 是给横排写的（撑满剩余宽度）。这里改成竖排之后主轴变成纵向，
-   flex-basis:0 就落到高度上，把滑块压成 0 高——宽度由 align-items:stretch 管，高度还给它。 */
-.brush-controls .mslider { flex: none; }
+/* 一行 = 滑块 + 一颗"恢复这支笔的默认值"。这一行是横排的，.mslider 自带的 flex:1
+   （见 range-slider.css）正好吃掉按钮以外的宽度。滑块不能直接挂在 .brush-controls 下：
+   那层是竖排，flex-basis:0 会落到高度上，把滑块压成 0 高。 */
+.brush-slider-row { display: flex; align-items: center; gap: 8px; }
+/* 按钮比工具栏那些 .icon-btn 小一圈——它是挨着滑块的配角，一样大会喧宾夺主。
+   flex:none 必须写：不写会被 .mslider 的 flex:1 挤扁成椭圆。 */
+.slider-reset { width: 26px; height: 26px; flex: none; }
+.slider-reset svg { width: 14px; height: 14px; }
 
 /* 颜色预设 + 自定义色轮的样式在 color-picker.css 里（跟设置页的选色盘共用一份） */
 

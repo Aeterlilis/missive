@@ -941,6 +941,11 @@ async function loadCjkFont(s) {
   CONFIG.CJK_FONT = CJK_FONT_MAP[s.cjkFont] || CJK_FONT_MAP.default;
 }
 
+// 每支笔各自记住被调过的粗细/笔尖角度：换笔时取回上次调的手感，没调过的那支才用预设自带的默认值。
+// 形如 { pen: { size: 9 }, flat: { size: 16, nibAngleDeg: 30 } }，跟着 saveBrush 整份写回后端——
+// 后端对 brush 是浅合并（server/index.js），整份覆盖才不会漏掉刚删掉的键。
+let brushByPreset = {};
+
 // 拉取运行时设置（写字速度 / 英文字体 / 首屏提示 / 纸张主题），合并进 CONFIG 或直接应用到页面。
 // 拉不到就用默认值，不阻塞启动。
 async function loadRuntimeConfig() {
@@ -1004,6 +1009,14 @@ async function loadRuntimeConfig() {
       // 存过的笔尖角度盖掉预设的默认值；没存过就用预设自带的
       if (CONFIG.BRUSH_PARAMS.chisel && typeof s.brush.nibAngleDeg === 'number') {
         CONFIG.BRUSH_PARAMS.nibAngleDeg = s.brush.nibAngleDeg;
+      }
+      // 旧版本只存了"当前这支笔"的粗细/角度，没有 byPreset。把它记到当前预设名下，
+      // 免得升级之后手上正调好的这支笔被打回默认值。
+      brushByPreset = { ...(s.brush.byPreset || {}) };
+      if (!s.brush.byPreset) {
+        const tuned = { size: CONFIG.BRUSH_SIZE };
+        if (CONFIG.BRUSH_PARAMS.chisel) tuned.nibAngleDeg = CONFIG.BRUSH_PARAMS.nibAngleDeg;
+        brushByPreset[CONFIG.BRUSH_PRESET_NAME] = tuned;
       }
     }
     CONFIG.AUTO_SEND_ENABLED = s.autoSendEnabled !== false;
@@ -1226,9 +1239,10 @@ function bindToolbar(app) {
   const brushPanel = $('brush-panel');
   const sizePicker = $('brush-size-picker');
   const anglePicker = $('brush-angle-picker');
-  // 要显隐的是 enhanceRangeSlider 包出来的那层 .mslider（轨道和手柄都在它里面），
-  // 只藏原生 input 的话轨道还留在面板上
-  const angleRow = () => anglePicker.closest('.mslider') || anglePicker;
+  const resetSizeBtn = $('btn-reset-size');
+  const resetAngleBtn = $('btn-reset-angle');
+  // 要显隐的是整行（轨道、手柄、重置按钮都在里面），只藏原生 input 的话这些全留在面板上
+  const angleRow = () => anglePicker.closest('.brush-slider-row') || anglePicker;
 
   const btnBrush = $('btn-brush');
   btnBrush.addEventListener('click', () => {
@@ -1258,11 +1272,35 @@ function bindToolbar(app) {
     document.querySelectorAll('.brush-presets button').forEach((b) => {
       b.classList.toggle('active', b.dataset.preset === CONFIG.BRUSH_PRESET_NAME);
     });
+    syncResetButtons();
     syncColorUI();
   }
 
-  async function saveBrush(partial) {
-    const brush = { preset: CONFIG.BRUSH_PRESET_NAME, color: CONFIG.INK_COLOR, size: CONFIG.BRUSH_SIZE, ...partial };
+  // 没调过就把重置按钮置灰——一眼能看出这支笔现在是不是原装手感，也免得点了个没反应的按钮。
+  // 拖滑块的过程中也要跟着变，所以从 syncBrushUI 和滑块的 input 里各调一次。
+  function syncResetButtons() {
+    const preset = BRUSH_PRESETS[CONFIG.BRUSH_PRESET_NAME] || BRUSH_PRESETS.pen;
+    resetSizeBtn.disabled = CONFIG.BRUSH_SIZE === preset.defaultSize;
+    resetAngleBtn.disabled = CONFIG.BRUSH_PARAMS.nibAngleDeg === preset.nibAngleDeg;
+  }
+
+  // 把当前手感记到这支笔名下。粗细每支笔都有，笔尖角度只有凿尖的平笔才有。
+  function rememberTweak() {
+    const tuned = brushByPreset[CONFIG.BRUSH_PRESET_NAME] || (brushByPreset[CONFIG.BRUSH_PRESET_NAME] = {});
+    tuned.size = CONFIG.BRUSH_SIZE;
+    if (CONFIG.BRUSH_PARAMS.chisel) tuned.nibAngleDeg = CONFIG.BRUSH_PARAMS.nibAngleDeg;
+  }
+
+  // 整份从 CONFIG 现读，调用方不用再拼片段——漏拼一个键就是"改了没存上"。
+  // 顶层的 size/nibAngleDeg 留着是给旧版本读的，新逻辑认 byPreset。
+  async function saveBrush() {
+    const brush = {
+      preset: CONFIG.BRUSH_PRESET_NAME,
+      color: CONFIG.INK_COLOR,
+      size: CONFIG.BRUSH_SIZE,
+      byPreset: brushByPreset,
+    };
+    if (typeof CONFIG.BRUSH_PARAMS.nibAngleDeg === 'number') brush.nibAngleDeg = CONFIG.BRUSH_PARAMS.nibAngleDeg;
     try {
       await fetch('/api/settings', {
         method: 'POST',
@@ -1282,19 +1320,43 @@ function bindToolbar(app) {
       // 拷贝一份：笔尖角度是就地改这个对象的，直接引用会把 BRUSH_PRESETS 里的预设本身改掉，
       // 换回来就不是原来的手感了
       CONFIG.BRUSH_PARAMS = { ...params };
-      CONFIG.BRUSH_SIZE = params.defaultSize;
+      // 这支笔调过就用调过的，没调过才用预设自带的默认值。所以再点一次当前这支笔什么也不会变，
+      // 换出去再换回来也还是你调的那样——要回默认值走滑块旁边那颗重置按钮。
+      const tuned = brushByPreset[preset] || {};
+      CONFIG.BRUSH_SIZE = typeof tuned.size === 'number' ? tuned.size : params.defaultSize;
+      if (CONFIG.BRUSH_PARAMS.chisel && typeof tuned.nibAngleDeg === 'number') {
+        CONFIG.BRUSH_PARAMS.nibAngleDeg = tuned.nibAngleDeg;
+      }
       syncBrushUI();
-      saveBrush({ preset, size: CONFIG.BRUSH_SIZE, nibAngleDeg: CONFIG.BRUSH_PARAMS.nibAngleDeg });
+      saveBrush();
     });
   });
 
-  sizePicker.addEventListener('input', () => { CONFIG.BRUSH_SIZE = parseInt(sizePicker.value, 10); });
-  sizePicker.addEventListener('change', () => saveBrush({ size: parseInt(sizePicker.value, 10) }));
+  sizePicker.addEventListener('input', () => {
+    CONFIG.BRUSH_SIZE = parseInt(sizePicker.value, 10);
+    syncResetButtons();
+  });
+  sizePicker.addEventListener('change', () => { rememberTweak(); saveBrush(); });
 
   anglePicker.addEventListener('input', () => {
     CONFIG.BRUSH_PARAMS.nibAngleDeg = parseInt(anglePicker.value, 10);
+    syncResetButtons();
   });
-  anglePicker.addEventListener('change', () => saveBrush({ nibAngleDeg: parseInt(anglePicker.value, 10) }));
+  anglePicker.addEventListener('change', () => { rememberTweak(); saveBrush(); });
+
+  // 重置：只把这一项拉回当前这支笔的预设值，另一项不动（调好的角度不该被"重置粗细"顺手带走）。
+  resetSizeBtn.addEventListener('click', () => {
+    CONFIG.BRUSH_SIZE = (BRUSH_PRESETS[CONFIG.BRUSH_PRESET_NAME] || BRUSH_PRESETS.pen).defaultSize;
+    rememberTweak();
+    syncBrushUI();
+    saveBrush();
+  });
+  resetAngleBtn.addEventListener('click', () => {
+    CONFIG.BRUSH_PARAMS.nibAngleDeg = (BRUSH_PRESETS[CONFIG.BRUSH_PRESET_NAME] || BRUSH_PRESETS.pen).nibAngleDeg;
+    rememberTweak();
+    syncBrushUI();
+    saveBrush();
+  });
 
   // ─── 颜色：预设色块 + 自定义色轮面板 ──────────────
   // 不用原生 <input type="color">：不少浏览器/webview（比如鸿蒙平板自带浏览器）
@@ -1502,7 +1564,7 @@ function bindToolbar(app) {
     colorHex.value = hex;
     colorPreview.style.background = hex;
     syncColorUI();
-    if (save) saveBrush({ color: hex });
+    if (save) saveBrush();
   }
 
   function setHueFromEvent(e) {
@@ -1564,7 +1626,7 @@ function bindToolbar(app) {
     CONFIG.INK_COLOR = hex;
     colorPreview.style.background = hex;
     syncColorUI();
-    saveBrush({ color: hex });
+    saveBrush();
   });
 
   presetSwatches.forEach((btn) => {
@@ -1572,7 +1634,7 @@ function bindToolbar(app) {
       CONFIG.INK_COLOR = btn.dataset.color;
       colorPanel.classList.add('hidden');
       syncColorUI();
-      saveBrush({ color: CONFIG.INK_COLOR });
+      saveBrush();
     });
   });
 

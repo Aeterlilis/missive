@@ -84,12 +84,19 @@
         <button type="button" class="color-swatch" data-color="#1f4d3a" title="墨绿" style="background:#1f4d3a"></button>
         <button type="button" id="btn-custom-color" class="color-swatch color-swatch-custom" title="自定义颜色"></button>
       </div>
-      <input type="range" id="brush-size-picker" min="2" max="30" step="1" title="粗细" />
+      <!-- 滑块得待在一个横排 flex 的行里（.brush-slider-row），右边跟一颗"恢复这支笔的默认值"。
+           .brush-controls 本身是竖排，滑块自带的 flex:1 在竖排里落到高度上，直接挂进去宽度
+           会塌成 0、手柄一直贴在最左边。 -->
+      <div class="brush-slider-row">
+        <input type="range" id="brush-size-picker" min="2" max="30" step="1" title="粗细" />
+        <button type="button" id="btn-reset-size" class="icon-btn slider-reset" title="恢复这支笔默认的粗细"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a6 6 0 1 0 1.9-4.4"/><path d="M2.6 3.5v3.5h3.5"/></svg></button>
+      </div>
       <!-- 笔尖角度：只有平笔是凿尖的，笔尖有朝向可言；其余笔刷是圆头，转了没有区别。
-           所以它跟着当前笔刷显隐，见 syncBrushUI。
-           必须跟粗细滑块一样直接挂在 .brush-controls 下——这里的宽度靠 align-items:stretch
-           撑开，多包一层容器滑块宽度就塌成 0，手柄会一直贴在最左边。 -->
-      <input type="range" id="brush-angle-picker" min="0" max="180" step="1" title="笔尖角度" />
+           所以整行跟着当前笔刷显隐，见 syncBrushUI。 -->
+      <div class="brush-slider-row">
+        <input type="range" id="brush-angle-picker" min="0" max="180" step="1" title="笔尖角度" />
+        <button type="button" id="btn-reset-angle" class="icon-btn slider-reset" title="恢复这支笔默认的笔尖角度"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a6 6 0 1 0 1.9-4.4"/><path d="M2.6 3.5v3.5h3.5"/></svg></button>
+      </div>
     </div>
     <div id="color-panel" class="color-picker-panel hidden">
       <div class="color-mode-tabs">
@@ -213,6 +220,6 @@
   </style>
 
   <!-- 模块以 ESM 加载，app.js 是主入口。?v= 强制刷新缓存 -->
-  <script type="module" src="src/app.js?v=37"></script>
+  <script type="module" src="src/app.js?v=38"></script>
 </body>
 </html>

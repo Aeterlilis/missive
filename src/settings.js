@@ -1,6 +1,7 @@
 // settings.js —— 设置页逻辑：多配置槽位的读写 + 拉取模型列表 + 全局设置。
 // v2：卡片化——API配置/人设/记忆都是"堆叠→点开→点进单张编辑"的卡片，系统提示词是平铺开关列表。
 
+import { registerServiceWorker } from './pwa.js';
 import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
 
@@ -1337,3 +1338,5 @@ function setRangeValue(id, v) {
 
 load();
 setupSectionNav();
+
+registerServiceWorker();

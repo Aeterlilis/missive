@@ -38,7 +38,10 @@ async function serverAlive() {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 1500);
   try {
-    const res = await fetch('/api/health', { cache: 'no-store', signal: ac.signal });
+    // 相对当前页面算，不写死 '/api/health'：应用可能挂在子路径下（GitHub Pages 上是
+    // /missive/），写死会跑去站点根目录问，问的不是自己那台。
+    const probe = new URL('api/health', location.href);
+    const res = await fetch(probe, { cache: 'no-store', signal: ac.signal });
     if (!res.ok) return false;
     // 光看 200 不够：静态托管（比如 GitHub Pages）会拿首页去应付任何找不到的路径，
     // 那也是 200，内容却是一整张 HTML。得让服务自报家门才算数。

@@ -1,5 +1,6 @@
 // history.js —— 历史记录页：按"对话"分组成卡片 + 点开看这次对话写了哪几页 + 详情/删除
 
+import { registerServiceWorker } from './pwa.js';
 import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
 
@@ -194,3 +195,5 @@ function buildEntryEl(entry) {
 }
 
 load();
+
+registerServiceWorker();

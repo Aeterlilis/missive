@@ -1,6 +1,7 @@
 // history.js —— 历史记录页：按"对话"分组成卡片 + 点开看这次对话写了哪几页 + 详情/删除
 
 import { registerServiceWorker } from './pwa.js';
+import { syncStatusBarColor } from './statusbar.js';
 import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
 
@@ -42,6 +43,7 @@ function applyChromeTheme(s) {
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--veil-bg', `rgba(${br}, ${bg}, ${bb}, 0.12)`); // 整页遮罩透明度固定，跟底色透明度滑块脱钩
   root.setProperty('--box-solid', boxHex);
+  syncStatusBarColor(boxHex); // 顶上那条系统状态栏跟着界面配色走，见 ./statusbar.js
   root.setProperty('--border-color', `rgba(${bdr}, ${bdg}, ${bdb}, ${borderAlpha})`);
   // 玻璃强度：反光/边缘光/模糊/边缘倒影四件事都在 src/glass.js，三个页面共用一份。
   // 边框颜色/透明度是独立的 --border-color（见上面），不归它管。

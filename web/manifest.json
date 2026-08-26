@@ -5,7 +5,7 @@
   "description": "用笔在屏幕上写字，它读完之后手写回复你",
   "start_url": "./",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",

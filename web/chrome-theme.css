@@ -7,6 +7,12 @@
    --ink 只管文字/图标颜色；--border-color 单独管所有边框颜色（颜色+透明度也都可调）——
    两个故意拆开，不然边框调淡了文字也会跟着变淡看不清，见 settings.js 的 applyBorderColor。 */
 :root {
+  /* 刘海屏/挖孔屏顶上和底下被系统占掉的那几截。没有的机器上是 0，写法照常成立。
+     所有贴边固定的东西（顶栏、导航、右上角那组入口、工具栏）都得让开这些距离，
+     不然内容会钻到刘海底下去。 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   --ink: #000000;
   --ink-faint: rgba(0, 0, 0, 0.15);
   --border-color: #000000;

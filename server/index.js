@@ -19,8 +19,6 @@ const history = require('./history');
 const providers = require('./providers');
 const { INSTRUCTION } = require('./persona');
 
-const DONE = providers.DONE;
-
 const DATA_DIR = process.env.SETTINGS_DIR || __dirname;
 const BACKGROUND_PATH = path.join(DATA_DIR, 'background.jpg');
 const cjkFontPath = (ext) => path.join(DATA_DIR, 'cjk-font.' + ext);
@@ -635,7 +633,7 @@ async function pipeStream(res, upstream, profile, onFinish) {
         const eventBlock = sseBuffer.slice(0, nl);
         sseBuffer = sseBuffer.slice(nl + 2);
         const result = providers.parseDelta(profile, eventBlock);
-        if (result === DONE) return finish();
+        if (result === providers.DONE) return finish();
         if (result) {
           tokenCount++;
           fullText += result;
@@ -683,7 +681,7 @@ async function requestSummary(profile, contextEntries) {
       const block = sseBuffer.slice(0, nl);
       sseBuffer = sseBuffer.slice(nl + 2);
       const result = providers.parseDelta(profile, block);
-      if (result === DONE) return fullText;
+      if (result === providers.DONE) return fullText;
       if (result) fullText += result;
     }
   }
@@ -741,7 +739,10 @@ function parseAttuneResult(text) {
   return { poke, fallback: Object.keys(fallback).length ? fallback : null };
 }
 
-function start(port, host) {
+// 先 await 加载共用模块（见 ./providers.js 的说明），再开始监听。
+// 返回的 Promise 在真正 listening 之后才 resolve，调用方拿到手就能读 address()。
+async function start(port, host) {
+  await providers.load();
   const app = createApp();
   const server = app.listen(port, host, () => {
     const addr = server.address();
@@ -761,6 +762,10 @@ function start(port, host) {
       console.log(`\nMissive 已启动: http://${host}:${addr.port}\n`);
     }
   });
+  await new Promise((resolve, reject) => {
+    server.once('listening', resolve);
+    server.once('error', reject);
+  });
   return server;
 }
 
@@ -768,5 +773,8 @@ module.exports = { createApp, start };
 
 if (require.main === module) {
   const PORT = parseInt(process.env.PORT, 10) || 3000;
-  start(PORT, '0.0.0.0');
+  start(PORT, '0.0.0.0').catch((e) => {
+    console.error('启动失败:', e.message);
+    process.exit(1);
+  });
 }

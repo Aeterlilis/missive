@@ -79,13 +79,12 @@ function createWindow(port) {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-app.whenReady().then(() => {
-  // port 0 = 系统分配一个空闲端口；只绑 127.0.0.1，不对局域网开放
-  httpServer = start(0, '127.0.0.1');
-  httpServer.on('listening', () => {
-    const port = httpServer.address().port;
-    createWindow(port);
-  });
+app.whenReady().then(async () => {
+  // port 0 = 系统分配一个空闲端口；只绑 127.0.0.1，不对局域网开放。
+  // start 是异步的：它先加载 web/src/shared 下那些后端和手机版共用的 ESM 模块，
+  // 监听起来之后才 resolve，所以这里拿到手就能读 address()。
+  httpServer = await start(0, '127.0.0.1');
+  createWindow(httpServer.address().port);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && httpServer) {

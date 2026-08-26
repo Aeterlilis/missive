@@ -8,6 +8,10 @@
 
 [**⬇ 下载 Windows 版**](../../releases/latest) · 双击安装，一路下一步
 
+[**⬇ 下载安卓版**](../../releases/latest) · 手机、平板都能装 · 全屏
+
+用 iPhone、iPad，或者不想装东西 → [**直接在浏览器里打开**](https://aeterlilis.github.io/missive/)
+
 </div>
 
 ---
@@ -22,11 +26,19 @@
 
 ## 怎么开始用
 
-**第一步：下载**
+**第一步：装上**
 
-到 [Releases 页面](../../releases/latest) 下载 `Missive-Setup-1.0.0.exe`，双击，一路下一步。装完桌面和开始菜单里都会有图标。
+三种用法，挑一种就行，设置和历史各自存在各自的设备上。
 
-安装到你自己的用户目录，全程不需要管理员权限。不想要了在「设置 → 应用」里正常卸载就行，写的日记会留着（存在 `%APPDATA%\Missive`，想清干净的话把这个文件夹也删掉）。
+| 设备 | 怎么开始 |
+|---|---|
+| **Windows 电脑** | 到 [Releases 页面](../../releases/latest) 下载 `Missive-Setup-1.1.0.exe`，双击，一路下一步。装完桌面和开始菜单里都会有图标 |
+| **安卓手机 / 平板** | 到 [Releases 页面](../../releases/latest) 下载 `Missive-1.1.0.apk`，传到设备上点一下安装。也可以直接把这个文件发给别人 |
+| **iPhone / iPad / 其它** | 浏览器打开 [aeterlilis.github.io/missive](https://aeterlilis.github.io/missive/)，在浏览器菜单里选「添加到主屏幕」，之后就跟一个应用一样 |
+
+电脑版安装到你自己的用户目录，全程不需要管理员权限。不想要了在「设置 → 应用」里正常卸载就行，写的日记会留着（存在 `%APPDATA%\Missive`，想清干净的话把这个文件夹也删掉）。
+
+安卓版是整块屏幕铺满的，纸一直铺到屏幕边缘，顶上不留系统状态栏。想看时间就从屏幕顶上往下划一点，状态栏会临时露出来，松手自己收回去。
 
 **第二步：填一次密钥**
 
@@ -79,8 +91,11 @@
 **杀毒软件报毒 / 直接给我删了**
 同上，没有签名的安装包容易被误判。在杀毒软件里把它加进白名单，或者从回收站还原。发布之前每个版本都过了 Windows Defender 全盘扫描。
 
+**安卓上提示「未知来源」/「此应用可能有害」**
+安卓对所有不是从应用商店装的包都会这么提示，跟这个包本身没关系。按提示允许一次就行。介意的话代码全在这个仓库里，可以自己看、自己打包。
+
 **打开是黑的 / 转圈半天没反应**
-第一次启动要加载字体，等十几秒。还是不行就关掉重开一次。
+电脑版第一次启动要加载字体，等十几秒。还是不行就关掉重开一次。安卓版字体是打进包里的，不用等。
 
 **写完没反应，弹出「还没配置 API」**
 密钥没填或者填错了。回设置检查那三栏，注意 URL 结尾一般要有 `/v1`。
@@ -88,11 +103,17 @@
 **回答说「这几笔没看清」**
 字太潦草或者太小了，写大一点。也可能是模型不支持读图，换一个带视觉的模型。
 
-**能在 iPad / 墨水屏平板上用吗**
-可以，但目前要自己跑源码（见下面）。手机 App 和平板版还在做。
+**能在 iPad / 平板上用吗**
+可以。安卓平板装 APK，iPad 用浏览器打开网页版再「添加到主屏幕」。鸿蒙平板实测可以用卓易通装 APK。
+
+**手写笔的压感有用吗**
+有用。钢笔、圆珠笔、马克笔、毛笔的粗细都跟着下笔力度走，「尖笔」那档尤其明显。
+
+**换了设备，之前写的还在吗**
+不在。设置和历史各存各的，装在哪台设备上就只在哪台设备上——包括 API 密钥，每台都要重填一次。
 
 **我的日记会被上传吗**
-写的内容会发给你自己填的那家 AI 服务用来生成回答，这是它工作的必要条件。除此之外不往任何地方传，历史记录只存在你自己电脑上。
+写的内容会发给你自己填的那家 AI 服务用来生成回答，这是它工作的必要条件。除此之外不往任何地方传，历史记录只存在你自己的设备上。
 
 ---
 
@@ -101,24 +122,30 @@
 
 <br>
 
+`web/` 是一堆静态文件，拿任意静态服务器伺候它就能跑，设置和历史存在浏览器的 IndexedDB 里，AI 请求由页面直接发。`http://localhost:xxxx/?mouse` 的 `?mouse` 让鼠标也能写字。
+
+也可以跑那个 Node 服务（`cd server && npm install && npm start`，浏览器开 `http://localhost:3000`），那时设置和历史改存在服务端。页面开机探一次 `/api/health` 自己决定走哪套，`?storage=local` / `?storage=remote` 可以强制指定。
+
+打包：
+
 ```bash
-cd server
-cp .env.example .env      # 或者跑起来之后在设置页里填
 npm install
-npm start
+npm run dist                       # Windows 安装包 → dist/Missive-Setup-<版本>.exe
+npx cap sync android               # 把 web/ 同步进安卓工程
+cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/
 ```
 
-浏览器打开 `http://localhost:3000/?mouse`（`?mouse` 让鼠标也能写字）。服务端监听 `0.0.0.0`，局域网里的平板直接开 `http://电脑IP:3000` 就能用，加到主屏幕可全屏。
+安卓版要 JDK 21 + Android SDK（compileSdk 36、build-tools 35），签名信息放在 `android/keystore.properties`（不在仓库里，自己打包会出未签名的包）。
 
-打包桌面版：根目录 `npm install && npm run dist`，产物在 `dist/Missive-Setup-<版本号>.exe`。
-
-**技术栈**：Node + Express 后端，前端纯手写 JS（无框架）。手写动画的做法是把字体渲染成位图，用 Zhang-Suen 算法细化成单像素骨架，再沿骨架逐笔描出。笔迹采集走 Pointer Events + 压感，淡出用哈希溶解。
+**技术栈**：前端纯手写 JS，无框架。手写动画的做法是把字体渲染成位图，用 Zhang-Suen 算法细化成单像素骨架，再沿骨架逐笔描出。笔迹采集走 Pointer Events + 压感，淡出用哈希溶解。桌面版是 Electron，安卓版是 Capacitor 套壳，两边装的都是同一份 `web/`。
 
 ```
-server/     index.js 后端主体 · settings.js 设置 · history.js 历史 · persona.js 默认提示词
-electron/   桌面版外壳
 web/src/    app.js 状态机 · ink.js 笔迹 · scribe.js 手写动画 · dissolve.js 淡出
             glass.js 玻璃层 · settings.js 设置页 · history.js 历史页
+            api.js 数据出入口（api-local.js 本地 / api-remote.js 走服务）
+            store.js IndexedDB · shared/ 前后端共用的上游请求与设置模型
+electron/   桌面版外壳          android/   安卓版原生工程
+server/     可选的 Node 服务
 ```
 
 </details>
@@ -127,7 +154,7 @@ web/src/    app.js 状态机 · ink.js 笔迹 · scribe.js 手写动画 · disso
 
 ## 授权与致谢
 
-本项目基于 [yana108/ebook-handwriting-diary](https://github.com/yana108/ebook-handwriting-diary)（MIT）二次开发，该项目又复刻自 [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)（MIT）。核心的时序设计、状态机与手写管线来自这两个项目，在此基础上重做了界面、设置系统、历史记录与桌面版打包。
+本项目基于 [yana108/ebook-handwriting-diary](https://github.com/yana108/ebook-handwriting-diary)（MIT）二次开发，该项目又复刻自 [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)（MIT）。核心的时序设计、状态机与手写管线来自这两个项目，在此基础上重做了界面、设置系统、历史记录，以及桌面版、网页版和安卓版的打包发布。
 
 预装字体各自遵循原始授权：霞鹜文楷、寒蝉春风、思源宋体、柳建毛草、钟齐志莽行等为开源字体（SIL OFL 或相应协议），西文花体来自 Google Fonts。
 

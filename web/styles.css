@@ -151,21 +151,21 @@ body.debug #debug { display: block; }
 /* 重置对话 / 历史记录 / 设置 入口：右上角常驻，从右往左排 */
 #settings-link {
   position: fixed;
-  top: calc(14px + var(--safe-top));
+  top: calc(14px + var(--safe-top-edge));
   right: 16px;
   z-index: 6;
 }
 
 #history-link {
   position: fixed;
-  top: calc(14px + var(--safe-top));
+  top: calc(14px + var(--safe-top-edge));
   right: 66px;
   z-index: 6;
 }
 
 #btn-reset-context {
   position: fixed;
-  top: calc(14px + var(--safe-top));
+  top: calc(14px + var(--safe-top-edge));
   right: 116px;
   z-index: 6;
 }
@@ -185,7 +185,7 @@ body.debug #debug { display: block; }
 
 body.toolbar-left #toolbar {
   flex-direction: column;
-  top: calc(14px + var(--safe-top));
+  top: calc(14px + var(--safe-top-edge));
   left: 12px;
 }
 
@@ -223,7 +223,7 @@ body.toolbar-bottom #toolbar > * { pointer-events: auto; }
    笔刷面板和清空确认共用同一套定位。 */
 body.toolbar-left #brush-panel,
 body.toolbar-left #confirm-box.at-toolbar {
-  top: calc(14px + var(--safe-top));
+  top: calc(14px + var(--safe-top-edge));
   left: 66px;
 }
 body.toolbar-bottom #brush-panel,
@@ -234,7 +234,7 @@ body.toolbar-bottom #confirm-box.at-toolbar {
 }
 /* 贴右上角那组入口（重置对话/历史/设置）下方 */
 #confirm-box.at-topright {
-  top: calc(66px + var(--safe-top));
+  top: calc(66px + var(--safe-top-edge));
   right: 16px;
 }
 

@@ -1,5 +1,6 @@
 package com.aeterlilis.missive;
 
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -7,6 +8,7 @@ import android.view.WindowManager;
 import android.webkit.WebView;
 
 import androidx.core.graphics.Insets;
+import androidx.core.view.DisplayCutoutCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -31,6 +33,9 @@ public class MainActivity extends BridgeActivity {
 
     /** 最近一次拿到的挖孔尺寸（物理像素）。页面换一页要重新告诉它，所以得存着。 */
     private Insets cutout = Insets.NONE;
+
+    /** 挖孔在屏幕左右两侧那两条边上伸到多深（物理像素）。挖孔只占正中间时是 0。 */
+    private int cutoutAtEdges = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +103,7 @@ public class MainActivity extends BridgeActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(parent, (v, insets) -> {
             cutout = insets.getInsets(WindowInsetsCompat.Type.displayCutout());
+            cutoutAtEdges = measureCutoutAtEdges(insets.getDisplayCutout(), v.getWidth());
             publishCutout();
             return insets; // 原样传下去，不加 padding 也不消费
         });
@@ -113,6 +119,31 @@ public class MainActivity extends BridgeActivity {
         parent.requestApplyInsets();
     }
 
+    /**
+     * 挖孔在左右两条边上伸到多深。
+     *
+     * 顶上那一截不该一律拿来当留白：挖孔在正中间（大多数国产机、水滴屏、居中的刘海）时，
+     * 贴在左上角和右上角的那些图标压根碰不到它，全都往下推只会在顶上空出一条很难看的白。
+     * 所以只看挖孔有没有真的伸进左右各四分之一那两条边里去——伸进来了才让开。
+     *
+     * 左右取同一个值：左边那列工具栏和右上角那组入口在视觉上是一对，必须齐平，
+     * 一边贴顶一边下沉比多留一点白更难看。
+     */
+    private int measureCutoutAtEdges(DisplayCutoutCompat cutoutInfo, int viewWidth) {
+        if (cutoutInfo == null) return 0;
+        int width = viewWidth > 0 ? viewWidth : getResources().getDisplayMetrics().widthPixels;
+        if (width <= 0) return 0;
+
+        int band = width / 4;
+        int deepest = 0;
+        for (Rect r : cutoutInfo.getBoundingRects()) {
+            boolean touchesEdge = r.left < band || r.right > width - band;
+            if (touchesEdge) deepest = Math.max(deepest, r.bottom);
+        }
+        // 别超过挖孔本身报出来的顶部间距：有些机器的 boundingRect 会把整条状态栏都算进去。
+        return Math.min(deepest, cutout.top);
+    }
+
     private void publishCutout() {
         float density = getResources().getDisplayMetrics().density;
         String script = String.format(
@@ -120,11 +151,13 @@ public class MainActivity extends BridgeActivity {
                 "document.documentElement.style.setProperty('--safe-area-inset-top','%dpx');"
                         + "document.documentElement.style.setProperty('--safe-area-inset-right','%dpx');"
                         + "document.documentElement.style.setProperty('--safe-area-inset-bottom','%dpx');"
-                        + "document.documentElement.style.setProperty('--safe-area-inset-left','%dpx');",
+                        + "document.documentElement.style.setProperty('--safe-area-inset-left','%dpx');"
+                        + "document.documentElement.style.setProperty('--safe-area-edge-top','%dpx');",
                 (int) (cutout.top / density),
                 (int) (cutout.right / density),
                 (int) (cutout.bottom / density),
-                (int) (cutout.left / density));
+                (int) (cutout.left / density),
+                (int) (cutoutAtEdges / density));
         runOnUiThread(() -> bridge.getWebView().evaluateJavascript(script, null));
     }
 }

@@ -17,6 +17,12 @@
        取 0px 兜底，于是等价于只看 env()。 */
   --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  /* 贴在左上角/右上角的东西用这个，不用上面那个。挖孔在屏幕正中间时它是 0——那些图标
+     离孔十万八千里，跟着一起下沉只会在顶上空出一条白。安卓版的 MainActivity 会算出
+     挖孔到底有没有伸进左右两侧那两条边里，伸进来了这个值才不是 0。
+     网页版拿不到挖孔的形状（只知道顶上被占了多高），退回 --safe-top 照旧避让。
+     注意：顶部居中的东西（#toast）该用 --safe-top，居中挖孔挡的正是那儿。 */
+  --safe-top-edge: var(--safe-area-edge-top, var(--safe-top));
 
   --ink: #000000;
   --ink-faint: rgba(0, 0, 0, 0.15);

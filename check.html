@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Missive 自检</title>
+<!-- 自检页。装不上主屏幕的时候用它当场看出是哪一环断了，不用去猜浏览器型号。
+     故意不从任何页面链过来，也不引任何模块——它要在应用本身出问题时照样能打开。 -->
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; padding: 20px 16px 40px;
+    font: 16px/1.7 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    max-width: 640px; margin-inline: auto;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { opacity: .6; font-size: 14px; margin-bottom: 20px; }
+  .row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 11px 0; border-bottom: 1px solid rgba(128,128,128,.25);
+  }
+  .mark { flex: none; width: 1.5em; font-size: 18px; text-align: center; }
+  .ok { color: #2e7d32; }
+  .bad { color: #c62828; }
+  .wait { opacity: .5; }
+  .label { font-weight: 600; }
+  .detail { font-size: 13px; opacity: .7; word-break: break-all; }
+  #verdict {
+    margin-top: 22px; padding: 14px 16px; border-radius: 10px;
+    background: rgba(128,128,128,.12); font-size: 15px;
+  }
+  #verdict b { display: block; margin-bottom: 6px; font-size: 16px; }
+  button {
+    margin-top: 16px; padding: 10px 18px; font-size: 15px; border-radius: 8px;
+    border: 1px solid rgba(128,128,128,.5); background: transparent; color: inherit;
+  }
+</style>
+</head>
+<body>
+<h1>Missive 自检</h1>
+<div class="sub">看看这台设备能不能把它装成一个独立的应用</div>
+<div id="rows"></div>
+<div id="verdict">正在检查…</div>
+<button id="copy">复制检查结果</button>
+
+<script>
+const rows = document.getElementById('rows');
+const results = [];
+
+// 安卓 Chrome 觉得这个站可以装的时候会发这个事件，但它来得比检查慢，
+// 所以先挂上监听，等它真来了再把那一行改掉。
+let promptRow = null;
+addEventListener('beforeinstallprompt', () => {
+  if (!promptRow) return;
+  promptRow.querySelector('.mark').textContent = '✓';
+  promptRow.querySelector('.mark').className = 'mark ok';
+  promptRow.querySelector('.detail').textContent = '浏览器确认这个可以装';
+});
+
+function add(label, state, detail) {
+  const el = document.createElement('div');
+  el.className = 'row';
+  const mark = state === true ? '✓' : state === false ? '✗' : '…';
+  const cls = state === true ? 'ok' : state === false ? 'bad' : 'wait';
+  el.innerHTML = `<div class="mark ${cls}">${mark}</div><div><div class="label"></div><div class="detail"></div></div>`;
+  el.querySelector('.label').textContent = label;
+  el.querySelector('.detail').textContent = detail || '';
+  rows.appendChild(el);
+  results.push(`${mark} ${label}${detail ? ' — ' + detail : ''}`);
+  return el;
+}
+
+(async () => {
+  // ① 现在是独立窗口还是浏览器里
+  const standalone = matchMedia('(display-mode: standalone)').matches
+    || matchMedia('(display-mode: fullscreen)').matches
+    || navigator.standalone === true;
+  add('现在是独立打开的', standalone,
+    standalone ? '没有浏览器地址栏，这就是装成功的样子' : '还在浏览器里（从主屏幕图标打开才看得准）');
+
+  // ② 安全上下文——https 或 localhost，不满足的话下面几项一定失败
+  add('连接是安全的（https）', window.isSecureContext, location.origin);
+
+  // ③ 浏览器认不认 Service Worker
+  const hasSW = 'serviceWorker' in navigator;
+  add('浏览器支持后台服务', hasSW, hasSW ? '' : '这个浏览器不支持，装不成应用');
+
+  // ④ 清单读不读得到
+  let manifestOk = false;
+  try {
+    const r = await fetch('manifest.json', { cache: 'no-store' });
+    const m = await r.json();
+    manifestOk = !!(m && m.name);
+    add('应用清单可读', manifestOk, manifestOk ? `${m.name} · ${m.display}` : '');
+  } catch (e) {
+    add('应用清单可读', false, e.message);
+  }
+
+  // ⑤ 真去注册一次，把报错原样显示出来
+  if (hasSW) {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+      const state = reg.active ? '已生效' : reg.installing ? '正在安装' : reg.waiting ? '等待接管' : '已登记';
+      add('后台服务注册成功', true, state);
+    } catch (e) {
+      add('后台服务注册成功', false, e.name + ': ' + e.message);
+    }
+  } else {
+    add('后台服务注册成功', false, '浏览器不支持，跳过');
+  }
+
+  // ⑥ 浏览器自己有没有说"这个可以装"。这条不一定会亮——iPhone 上根本没有这个事件，
+  // 装好之后的独立窗口里也不会再发。所以它只是个加分项，不亮不代表装不上。
+  promptRow = add('浏览器提示可安装', null, '等一下看它亮不亮（有的浏览器从来不亮，不用管）');
+
+  add('浏览器标识', null, navigator.userAgent);
+
+  const bad = results.filter((r) => r.startsWith('✗'));
+  const v = document.getElementById('verdict');
+  if (!hasSW) {
+    v.innerHTML = '<b>这个浏览器装不了</b>换个浏览器打开同一个地址再试：安卓上用 Chrome 或 Edge，iPhone 上必须用 Safari。夸克 / UC / QQ 浏览器 / 微信里打开都只会存个书签。';
+  } else if (bad.length === 0 && !standalone) {
+    v.innerHTML = '<b>条件都满足了</b>说明装得上。在浏览器菜单里找「安装应用」或「添加到主屏幕」，装完从桌面图标打开，再回到这一页，最上面那条应该变成 ✓。';
+  } else if (standalone) {
+    v.innerHTML = '<b>装好了</b>现在就是独立打开的，没有浏览器外壳。';
+  } else {
+    v.innerHTML = '<b>有几项没过</b>把上面打 ✗ 的那几条念给 Claude 听。';
+  }
+})();
+
+document.getElementById('copy').addEventListener('click', async () => {
+  const text = results.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    document.getElementById('copy').textContent = '已复制，粘给 Claude 就行';
+  } catch {
+    // 有些浏览器不给剪贴板权限，那就把文本摊在页面上让人自己选
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'white-space:pre-wrap;word-break:break-all;font-size:13px';
+    pre.textContent = text;
+    document.body.appendChild(pre);
+    document.getElementById('copy').textContent = '复制不了，下面这段自己选中';
+  }
+});
+</script>
+</body>
+</html>

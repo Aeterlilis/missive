@@ -1,8 +1,23 @@
 /* 历史页没有分区导航，settings.css 给 .wrap 留的顶部空间是按"header+导航"两层算的，
    这里只有一层 header，改窄一点；横屏那份同理，也不需要给导航栏留左边距 */
-.wrap { padding-top: 74px; }
+.wrap { padding-top: calc(74px + var(--safe-top)); padding-bottom: calc(20px + var(--safe-bottom)); }
 @media (orientation: landscape) {
-  .wrap { padding-top: 74px; padding-left: 20px; max-width: 900px; }
+  .wrap { padding-top: calc(74px + var(--safe-top)); padding-left: 20px; max-width: 900px; }
+}
+
+/* 跟设置页同一套（那边有详细说明）：关掉点击高亮、长按菜单、回弹，输入框放行。
+   这两页共用不了 styles.css，只能各写一份。 */
+* { -webkit-tap-highlight-color: transparent; }
+html, body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* 一次"对话"一张卡：默认只显示头部（首页缩略图+日期+页数），点开才展开这次对话写的所有页。

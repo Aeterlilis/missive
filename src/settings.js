@@ -2,6 +2,7 @@
 // v2：卡片化——API配置/人设/记忆都是"堆叠→点开→点进单张编辑"的卡片，系统提示词是平铺开关列表。
 
 import { registerServiceWorker } from './pwa.js';
+import { syncStatusBarColor } from './statusbar.js';
 import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
 
@@ -187,6 +188,7 @@ function applyChromeTheme(ink, boxHex, alpha) {
   root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
   root.setProperty('--veil-bg', `rgba(${br}, ${bg}, ${bb}, ${VEIL_ALPHA})`);
   root.setProperty('--box-solid', boxHex);
+  syncStatusBarColor(boxHex); // 顶上那条系统状态栏跟着界面配色走，见 ./statusbar.js
 }
 
 // 边框颜色跟文字颜色是分开的两套（用户明确要求：调淡边框不该连文字一起变淡看不清）。

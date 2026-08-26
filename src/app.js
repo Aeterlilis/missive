@@ -12,6 +12,7 @@
 // 关键巧思：提交时立刻发起 AI 请求，饮墨动画的 ~1s 正好掩盖首字延迟。
 
 import { registerServiceWorker } from './pwa.js';
+import { syncStatusBarColor } from './statusbar.js';
 import { api } from './api.js';
 import { CONFIG, BRUSH_PRESETS } from './config.js';
 import { applyGlassIntensity } from './glass.js';
@@ -986,6 +987,7 @@ async function loadRuntimeConfig() {
       root.setProperty('--ink-faint', `rgba(${ir}, ${ig}, ${ib}, 0.15)`);
       root.setProperty('--box-bg', `rgba(${br}, ${bg}, ${bb}, ${alpha})`);
       root.setProperty('--box-solid', boxHex);
+  syncStatusBarColor(boxHex); // 顶上那条系统状态栏跟着界面配色走，见 ./statusbar.js
       root.setProperty('--border-color', `rgba(${bdr}, ${bdg}, ${bdb}, ${borderAlpha})`);
     }
     // 玻璃强度：反光/边缘光/模糊/边缘倒影四件事都在 src/glass.js，三个页面共用一份。

@@ -18,6 +18,7 @@ const shared = require('./shared');
 const settingsStore = require('./settings');
 const history = require('./history');
 const providers = require('./providers');
+const convo = () => shared.get('conversation'); // 提示词文案和上下文拼装，跟手机版共用
 const persona = require('./persona'); // 转接头，取值要在 shared.load() 之后，见 ./shared.js
 
 const DATA_DIR = process.env.SETTINGS_DIR || __dirname;
@@ -34,56 +35,25 @@ function createApp() {
   const WEB_DIR = path.join(__dirname, '..', 'web');
   app.use(express.static(WEB_DIR));
 
+  // 页面开机时探这一下，决定自己是走服务还是本地存储，见 web/src/api.js。
+  // 必须自报家门：静态托管会拿首页去应付找不到的路径，那也是 200，光看状态码分不出来。
+  app.get('/api/health', (req, res) => res.json({ missive: true }));
+
   // ─── 设置读写 ────────────────────────────────────
   // profiles 里的 apiKey 永远不回传给前端，只回传 hasKey 布尔值
   // resolvedSpec 是"选自动识别时，现在这个 URL 会被判成哪种"，给设置页显示用
-  const publicProfile = (p) => ({
-    id: p.id, name: p.name, baseUrl: p.baseUrl, model: p.model, hasKey: !!p.apiKey,
-    spec: p.spec || 'auto', resolvedSpec: providers.resolveSpec(p),
-  });
+  const publicProfile = (p) => settingsStore.publicProfile(p);
 
+  // 给页面的那份投影（不含密钥）由 settings-model 拼，跟手机版是同一份代码。
+  // 这里只补上"存储那边才知道的事"——有没有存过背景图/字体、上下文攒了几条。
   app.get('/api/settings', (req, res) => {
     const s = settingsStore.load();
-    res.json({
-      profiles: s.profiles.map(publicProfile),
-      activeProfileId: s.activeProfileId,
-      maxTokens: s.maxTokens,
-      promptCards: s.promptCards,
-      font: s.font,
-      speed: s.speed,
+    res.json(settingsStore.publicSettings(s, {
       hintText: settingsStore.resolveHintText(s),
-      theme: s.theme,
-      themeColor: s.themeColor,
-      bgColor: s.bgColor,
-      chromeTheme: s.chromeTheme,
-      chromeInk: s.chromeInk,
-      chromeBox: s.chromeBox,
-      chromeBoxAlpha: s.chromeBoxAlpha,
-      chromeBorder: s.chromeBorder,
-      chromeBorderAlpha: s.chromeBorderAlpha,
-      glassIntensity: s.glassIntensity,
       hasCustomBackground: fs.existsSync(BACKGROUND_PATH),
-      cjkFont: s.cjkFont,
-      cjkFontName: s.cjkFontName,
       hasCjkFont: !!(s.cjkFontExt && fs.existsSync(cjkFontPath(s.cjkFontExt))),
-      contextTurns: s.contextTurns,
       contextCount: history.recentContext(s.contextResetAt, s.contextTurns).length,
-      autoSendEnabled: s.autoSendEnabled,
-      autoSendSeconds: s.autoSendSeconds,
-      fadeSeconds: s.fadeSeconds,
-      lingerSeconds: s.lingerSeconds,
-      inkLingerSeconds: s.inkLingerSeconds,
-      inkFadeSeconds: s.inkFadeSeconds,
-      penOnly: s.penOnly,
-      replyFontScale: s.replyFontScale,
-      replyAlign: s.replyAlign,
-      toolbarPosition: s.toolbarPosition,
-      confirmClearAll: s.confirmClearAll,
-      confirmOnReset: s.confirmOnReset,
-      brush: s.brush,
-      pokeLines: s.pokeLines || null,
-      fallbackLines: s.fallbackLines || null,
-    });
+    }));
   });
 
   // 重置对话：之后的请求不再把重置点之前的历史当上下文（历史本身不删）。
@@ -194,68 +164,7 @@ function createApp() {
   // 全局设置（人设/速度/字体/回答长度/首屏提示/背景主题/切换当前配置）
   app.post('/api/settings', (req, res) => {
     const s = settingsStore.load();
-    const body = req.body || {};
-    const next = { ...s };
-    if (typeof body.maxTokens === 'number' && body.maxTokens > 0) next.maxTokens = Math.round(body.maxTokens);
-    if (typeof body.font === 'string') next.font = body.font;
-    if (typeof body.speed === 'number') next.speed = Math.max(1, Math.min(10, body.speed));
-    if (typeof body.theme === 'string') next.theme = body.theme;
-    if (typeof body.themeColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.themeColor)) {
-      next.themeColor = body.themeColor.toLowerCase();
-    }
-    if (typeof body.bgColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.bgColor)) {
-      next.bgColor = body.bgColor.toLowerCase();
-    }
-    if (['day', 'night', 'custom'].includes(body.chromeTheme)) next.chromeTheme = body.chromeTheme;
-    if (typeof body.chromeInk === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeInk)) {
-      next.chromeInk = body.chromeInk.toLowerCase();
-    }
-    if (typeof body.chromeBox === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeBox)) {
-      next.chromeBox = body.chromeBox.toLowerCase();
-    }
-    if (typeof body.chromeBoxAlpha === 'number' && body.chromeBoxAlpha > 0) {
-      // 下限跟设置页那个滑块的 min 保持一致，不然滑到底的值一保存就被顶回来
-      next.chromeBoxAlpha = Math.max(0.05, Math.min(1, body.chromeBoxAlpha));
-    }
-    if (typeof body.chromeBorder === 'string' && /^#[0-9a-fA-F]{6}$/.test(body.chromeBorder)) {
-      next.chromeBorder = body.chromeBorder.toLowerCase();
-    }
-    if (typeof body.chromeBorderAlpha === 'number' && body.chromeBorderAlpha > 0) {
-      next.chromeBorderAlpha = Math.max(0.05, Math.min(1, body.chromeBorderAlpha));
-    }
-    if (['off', 'standard', 'enhanced'].includes(body.glassIntensity)) next.glassIntensity = body.glassIntensity;
-    if (['default', 'liujian', 'zhimang', 'notoserif', 'chunfeng', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
-    if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;
-    if (typeof body.autoSendSeconds === 'number' && body.autoSendSeconds > 0) {
-      next.autoSendSeconds = Math.max(0.5, Math.min(20, body.autoSendSeconds));
-    }
-    if (typeof body.fadeSeconds === 'number' && body.fadeSeconds > 0) {
-      next.fadeSeconds = Math.max(0.3, Math.min(8, body.fadeSeconds));
-    }
-    if (typeof body.lingerSeconds === 'number' && body.lingerSeconds > 0) {
-      next.lingerSeconds = Math.max(1, Math.min(15, body.lingerSeconds));
-    }
-    if (typeof body.inkLingerSeconds === 'number' && body.inkLingerSeconds > 0) {
-      next.inkLingerSeconds = Math.max(0.5, Math.min(10, body.inkLingerSeconds));
-    }
-    if (typeof body.inkFadeSeconds === 'number' && body.inkFadeSeconds > 0) {
-      next.inkFadeSeconds = Math.max(0.3, Math.min(6, body.inkFadeSeconds));
-    }
-    if (typeof body.penOnly === 'boolean') next.penOnly = body.penOnly;
-    if (typeof body.replyFontScale === 'number' && body.replyFontScale > 0) {
-      next.replyFontScale = Math.max(0.5, Math.min(1.5, body.replyFontScale));
-    }
-    if (['left', 'center', 'right'].includes(body.replyAlign)) next.replyAlign = body.replyAlign;
-    if (['left', 'bottom'].includes(body.toolbarPosition)) next.toolbarPosition = body.toolbarPosition;
-    if (typeof body.confirmClearAll === 'boolean') next.confirmClearAll = body.confirmClearAll;
-    if (typeof body.confirmOnReset === 'boolean') next.confirmOnReset = body.confirmOnReset;
-    if (body.brush && typeof body.brush === 'object') {
-      next.brush = { ...s.brush, ...body.brush };
-    }
-    if (typeof body.activeProfileId === 'string' && s.profiles.some((p) => p.id === body.activeProfileId)) {
-      next.activeProfileId = body.activeProfileId;
-    }
-    settingsStore.save(next);
+    settingsStore.save(settingsStore.applySettingsPatch(s, req.body || {}));
     res.json({ ok: true });
   });
 
@@ -281,10 +190,7 @@ function createApp() {
     const s = settingsStore.load();
     const card = s.promptCards.find((c) => c.id === req.params.id);
     if (!card) return res.status(404).json({ error: '卡片不存在' });
-    const body = req.body || {};
-    if (typeof body.title === 'string') card.title = body.title.trim() || card.title;
-    if (typeof body.content === 'string') card.content = body.content;
-    if (typeof body.enabled === 'boolean') card.enabled = body.enabled;
+    settingsStore.applyCardPatch(card, req.body || {});
     settingsStore.save(s);
     res.json({ ok: true, card });
   });
@@ -312,13 +218,7 @@ function createApp() {
   app.post('/api/profiles', (req, res) => {
     const s = settingsStore.load();
     const body = req.body || {};
-    const p = settingsStore.newProfile({
-      name: (body.name || '新配置').trim(),
-      baseUrl: (body.baseUrl || '').trim(),
-      apiKey: (body.apiKey || '').trim(),
-      model: (body.model || '').trim(),
-      spec: providers.SPECS[body.spec] ? body.spec : 'auto',
-    });
+    const p = settingsStore.profileFromInput(body);
     s.profiles.push(p);
     s.activeProfileId = p.id;
     settingsStore.save(s);
@@ -329,12 +229,7 @@ function createApp() {
     const s = settingsStore.load();
     const p = s.profiles.find((x) => x.id === req.params.id);
     if (!p) return res.status(404).json({ error: '配置不存在' });
-    const body = req.body || {};
-    if (typeof body.name === 'string' && body.name.trim()) p.name = body.name.trim();
-    if (typeof body.baseUrl === 'string') p.baseUrl = body.baseUrl.trim();
-    if (typeof body.apiKey === 'string' && body.apiKey.trim()) p.apiKey = body.apiKey.trim();
-    if (typeof body.model === 'string') p.model = body.model.trim();
-    if (body.spec === 'auto' || providers.SPECS[body.spec]) p.spec = body.spec;
+    settingsStore.applyProfilePatch(p, req.body || {});
     settingsStore.save(s);
     res.json({ ok: true, profile: publicProfile(p) });
   });
@@ -389,54 +284,25 @@ function createApp() {
     const profile = settingsStore.activeProfile(s);
     if (!profile.apiKey || !profile.baseUrl || !profile.model) {
       return res.status(400).json({ error: '还没配置 API' });
-    }
-
-    const TASK = [
-      '下面这件事跟平时的对话无关，请照你上面的人设完成它。你要写两组短句，都是你自己会说的话。',
-      '',
-      '【第一组：被反复戳时的反应】',
-      '对方会反复戳你的头像，就像戳一个人的肩膀。第一下和第七下，任何人的反应都不会一样。',
-      '写五档，一档比一档情绪更重，每档三条备选（随机抽一条显示）。',
-      '第一档几乎没什么反应，第五档已经拿对方没办法了。',
-      '',
-      '【第二组：三种意外情况下的托辞】',
-      '这个应用里，对方手写一页纸给你，你读完手写回复。偶尔会出岔子，这时要由你开口说一句。',
-      '三种情况各写三条备选：',
-      '- unreadable：这一页你没能读出来。（对方的字迹、或者别的什么原因，按你的性格挑一个说法）',
-      '- distracted：等太久了，这一轮算是错过了。',
-      '- blank：话到嘴边什么都没有，得请对方再写一遍。',
-      '',
-      '【共同要求】',
-      '- 每条都很短，最多十几个字，是脱口而出的一句，不是完整对白。',
-      '- 用第一人称，就是你在说话；不要描写动作，不要加引号、编号或任何前缀。',
-      '- 第二组三种都要能让对方明白"这次没成，可以再来一次"，别只顾着有情绪。',
-      '- 只输出一个 JSON 对象，不要解释，不要代码块标记。',
-      '',
-      '格式（内容全部换成你自己的）：',
-      '{"poke":[["嗯？","在。","怎么了"],["又戳。","还在。","有事？"],["…","你很闲。","别戳了。"],'
-        + '["……","随你吧。","我不动了。"],["你赢了。","我认输。","随便你戳。"]],'
-        + '"unreadable":["墨迹晕开了，我读不出来。","这页我认不全。","字太赶了，我跟不上。"],'
-        + '"distracted":["我走神了，能再说一遍吗？","刚才没接住，再来一次。","这一轮我错过了。"],'
-        + '"blank":["风把字吹散了，再写一遍吧。","我这儿是空的，你再来一次。","什么都没剩下，重来。"]}',
-    ].join('\n');
-
+    }    // 跟应用里其它请求一样走流式，只是这边不往外转发、整段吃完再一次性解析。
+    // 曾经这一处是唯一一个不流式的请求，跟手机版那套对不上；两边走同一条路才好改。
     const request = {
-      stream: false,
+      stream: true,
       maxTokens: 800,
       instructions: settingsStore.buildInstructions(s),
-      turns: [{ role: 'user', parts: [{ type: 'text', text: TASK }] }],
+      turns: [{ role: 'user', parts: [{ type: 'text', text: convo().ATTUNE_TASK }] }],
     };
 
-    let data;
+    let text;
     try {
       // 不重试：这是彩蛋，失败了再按一次就行，不值得替用户多花几次调用
       const upstream = await postUpstream(profile, request, { maxRetries: 1 });
-      data = await upstream.json();
+      text = await shared.get('upstream').readAllText(upstream, profile);
     } catch (e) {
       return sendUpstreamError(res, e);
     }
 
-    const parsed = parseAttuneResult(providers.extractText(profile, data));
+    const parsed = convo().parseAttuneResult(text);
     // 戳的那五档是这次的主菜，它没解析出来就整个算失败——保留原有的，绝不写半套进去。
     // 三种托辞是各自独立的，谁能用就换谁，剩下的继续用内置那份。
     if (!parsed || !parsed.poke) {
@@ -474,7 +340,7 @@ function createApp() {
       stream: true,
       maxTokens: parseInt(s.maxTokens, 10) || 280,
       instructions: settingsStore.buildInstructions(s),
-      turns: [...buildContextTurns(contextEntries), {
+      turns: [...convo().buildContextTurns(contextEntries), {
         role: 'user',
         parts: [
           { type: 'text', text: persona.INSTRUCTION },
@@ -515,13 +381,12 @@ function createApp() {
 
     // 人设卡片默认是围绕"看图读墨迹"写的（"如果字迹潦草……看不清就说看不清"），
     // 打字模式没有图片，得追一句提示，不然AI容易莫名其妙地说"看不清"。
-    const TYPED_MODE_NOTE = '（提示：这一次对方是直接打字发给你的，不是手写照片，正常回应文字内容即可，不要说"看不清"、"字迹模糊"之类只适用于图片的话。）';
 
     const request = {
       stream: true,
       maxTokens: parseInt(s.maxTokens, 10) || 280,
-      instructions: settingsStore.buildInstructions(s) + '\n\n' + TYPED_MODE_NOTE,
-      turns: [...buildContextTurns(contextEntries), { role: 'user', parts: [{ type: 'text', text }] }],
+      instructions: settingsStore.buildInstructions(s) + '\n\n' + convo().TYPED_MODE_NOTE,
+      turns: [...convo().buildContextTurns(contextEntries), { role: 'user', parts: [{ type: 'text', text }] }],
     };
 
     let upstream;
@@ -539,20 +404,6 @@ function createApp() {
   });
 
   return app;
-}
-
-// 把一条历史记录摊成中立请求里的一轮（用户那半 + AI回复那半）。
-// 手写来的那半是图，打字来的那半是文字。
-function buildContextTurns(entries) {
-  return entries.flatMap((entry) => [
-    {
-      role: 'user',
-      parts: entry.kind === 'typed'
-        ? [{ type: 'text', text: entry.userText || '' }]
-        : [{ type: 'image', dataUrl: entry.imageDataUrl }],
-    },
-    { role: 'assistant', parts: [{ type: 'text', text: entry.reply }] },
-  ]);
 }
 
 // 发请求、退避重试的逻辑在 web/src/shared/upstream.js，跟手机版共用。
@@ -602,72 +453,19 @@ async function pipeStream(res, upstream, profile, onFinish) {
   }
 }
 
-const SUMMARY_PROMPT = '请把以上这些互动内容总结成一段简短的长期记忆备注，帮助你以后回忆起对方是谁、聊过什么、有什么值得记住的事或偏好。控制在150字以内，不分点、不用markdown，就写成一段随手记的备注。';
-
 // 让AI把最近几轮对话总结成一段话，用于生成"长期记忆"卡片。复用 /interpret 同款的
-// 流式请求 + 重试逻辑，只是这里在服务端把整段流吃完再一次性返回文本，不转发给前端。
+// 流式请求 + 重试逻辑，只是这里把整段流吃完再一次性返回文本，不转发给前端。
 async function requestSummary(profile, contextEntries) {
   const request = {
     stream: true,
     maxTokens: 300,
     turns: [
-      ...buildContextTurns(contextEntries),
-      { role: 'user', parts: [{ type: 'text', text: SUMMARY_PROMPT }] },
+      ...convo().buildContextTurns(contextEntries),
+      { role: 'user', parts: [{ type: 'text', text: convo().SUMMARY_PROMPT }] },
     ],
   };
   const upstream = await postUpstream(profile, request, { maxRetries: 4 });
   return shared.get('upstream').readAllText(upstream, profile);
-}
-
-const FALLBACK_KINDS = ['unreadable', 'distracted', 'blank'];
-
-// 一句一句地洗：去掉模型爱加的引号、编号、项目符号，过长的截断。
-function cleanLines(arr) {
-  if (!Array.isArray(arr)) return null;
-  const out = arr
-    .filter((x) => typeof x === 'string' && x.trim())
-    .map((x) => x.trim()
-      .replace(/^[-*\d.、)\s]+/, '')
-      .replace(/^["“”'']+|["“”'']+$/g, '')
-      .slice(0, 40))
-    .filter(Boolean);
-  return out.length ? out : null;
-}
-
-// 把模型吐出来的东西解析成 { poke, fallback }。模型很爱多说两句、裹一层代码块，
-// 所以先把第一个 { 到最后一个 } 之间截出来再解析。
-// 也兼容早期那版只返回一个裸数组（纯五档）的形状——那会儿提示词就是那么写的。
-function parseAttuneResult(text) {
-  const raw = String(text || '');
-  const objStart = raw.indexOf('{');
-  const objEnd = raw.lastIndexOf('}');
-  let parsed = null;
-  if (objStart >= 0 && objEnd > objStart) {
-    try { parsed = JSON.parse(raw.slice(objStart, objEnd + 1)); } catch { parsed = null; }
-  }
-  if (!parsed) {
-    const arrStart = raw.indexOf('[');
-    const arrEnd = raw.lastIndexOf(']');
-    if (arrStart < 0 || arrEnd <= arrStart) return null;
-    try { parsed = { poke: JSON.parse(raw.slice(arrStart, arrEnd + 1)) }; } catch { return null; }
-  }
-
-  // 五档：必须齐齐整整五档、每档至少一条，差一点就整个不要——递进缺一环就垮了
-  let poke = null;
-  if (Array.isArray(parsed.poke) && parsed.poke.length === 5) {
-    const tiers = parsed.poke.map(cleanLines);
-    if (tiers.every(Boolean)) poke = tiers;
-  }
-
-  // 三种托辞彼此独立，谁能用收谁，剩下的继续用内置那份
-  const fallback = {};
-  for (const kind of FALLBACK_KINDS) {
-    const lines = cleanLines(parsed[kind]);
-    if (lines) fallback[kind] = lines;
-  }
-
-  if (!poke && !Object.keys(fallback).length) return null;
-  return { poke, fallback: Object.keys(fallback).length ? fallback : null };
 }
 
 // 先 await 加载后端和手机版共用的那几个模块（见 ./shared.js），再开始监听。

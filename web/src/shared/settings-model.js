@@ -15,6 +15,7 @@
 //      见 ./providers.js。存量配置一律写死成 responses——它们都是按那个接口配好能用的。
 
 import { DEFAULT_PERSONA } from './persona.js';
+import { SPECS, resolveSpec } from './providers.js';
 
 export const CARD_CATEGORIES = ['ai_persona', 'user_persona', 'long_term_memory', 'other']; // 会拼进发给AI的instructions
 export const HINT_CATEGORY = 'hint'; // 首屏提示语卡片，独立于上面——不拼AI提示词，每天随机选一条展示
@@ -234,6 +235,147 @@ export function resolveHintText(settings) {
   settings.hintPickDate = today;
   settings.hintPickCardId = picked.id;
   return { text: picked.content, changed: true };
+}
+
+// ─── 对外投影 ─────────────────────────────────────
+// 页面拿到的设置跟存下来的不完全一样：**apiKey 永远不给出去**，只给一个"填没填过"。
+// 后端时代这是为了不把密钥发到网线上；本地模式下页面和存储在同一个进程里，这层依然留着——
+// 密钥只在真正发请求的那一刻取用，别的地方碰不到它，能少一整类"不小心显示/打印出来"的事故。
+
+// resolvedSpec 是"选自动识别时，现在这个 URL 会被判成哪种"，给设置页显示用
+export function publicProfile(p) {
+  return {
+    id: p.id, name: p.name, baseUrl: p.baseUrl, model: p.model, hasKey: !!p.apiKey,
+    spec: p.spec || 'auto', resolvedSpec: resolveSpec(p),
+  };
+}
+
+// extras 里那几个是"存储那边才知道的事"（有没有存过背景图/字体、上下文攒了几条），
+// 各自的存储实现算好了传进来。
+export function publicSettings(s, extras = {}) {
+  return {
+    profiles: s.profiles.map(publicProfile),
+    activeProfileId: s.activeProfileId,
+    maxTokens: s.maxTokens,
+    promptCards: s.promptCards,
+    font: s.font,
+    speed: s.speed,
+    hintText: extras.hintText,
+    theme: s.theme,
+    themeColor: s.themeColor,
+    bgColor: s.bgColor,
+    chromeTheme: s.chromeTheme,
+    chromeInk: s.chromeInk,
+    chromeBox: s.chromeBox,
+    chromeBoxAlpha: s.chromeBoxAlpha,
+    chromeBorder: s.chromeBorder,
+    chromeBorderAlpha: s.chromeBorderAlpha,
+    glassIntensity: s.glassIntensity,
+    hasCustomBackground: !!extras.hasCustomBackground,
+    cjkFont: s.cjkFont,
+    cjkFontName: s.cjkFontName,
+    hasCjkFont: !!extras.hasCjkFont,
+    contextTurns: s.contextTurns,
+    contextCount: extras.contextCount || 0,
+    autoSendEnabled: s.autoSendEnabled,
+    autoSendSeconds: s.autoSendSeconds,
+    fadeSeconds: s.fadeSeconds,
+    lingerSeconds: s.lingerSeconds,
+    inkLingerSeconds: s.inkLingerSeconds,
+    inkFadeSeconds: s.inkFadeSeconds,
+    penOnly: s.penOnly,
+    replyFontScale: s.replyFontScale,
+    replyAlign: s.replyAlign,
+    toolbarPosition: s.toolbarPosition,
+    confirmClearAll: s.confirmClearAll,
+    confirmOnReset: s.confirmOnReset,
+    brush: s.brush,
+    pokeLines: s.pokeLines || null,
+    fallbackLines: s.fallbackLines || null,
+  };
+}
+
+// ─── 保存设置 ─────────────────────────────────────
+// 逐项校验再落，认识的才收：页面传来的值不一定干净（老版本页面、手改过的存档、
+// 将来某个还没做完的控件），照单全收会把设置写成一堆 undefined。
+// 返回新的设置对象，原来那个不动。
+
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+
+export function applySettingsPatch(settings, patch = {}) {
+  const s = settings;
+  const body = patch;
+  const next = { ...s };
+  const hex = (v) => typeof v === 'string' && HEX6.test(v);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  if (typeof body.maxTokens === 'number' && body.maxTokens > 0) next.maxTokens = Math.round(body.maxTokens);
+  if (typeof body.font === 'string') next.font = body.font;
+  if (typeof body.speed === 'number') next.speed = clamp(body.speed, 1, 10);
+  if (typeof body.theme === 'string') next.theme = body.theme;
+  if (hex(body.themeColor)) next.themeColor = body.themeColor.toLowerCase();
+  if (hex(body.bgColor)) next.bgColor = body.bgColor.toLowerCase();
+  if (['day', 'night', 'custom'].includes(body.chromeTheme)) next.chromeTheme = body.chromeTheme;
+  if (hex(body.chromeInk)) next.chromeInk = body.chromeInk.toLowerCase();
+  if (hex(body.chromeBox)) next.chromeBox = body.chromeBox.toLowerCase();
+  if (typeof body.chromeBoxAlpha === 'number' && body.chromeBoxAlpha > 0) {
+    // 下限跟设置页那个滑块的 min 保持一致，不然滑到底的值一保存就被顶回来
+    next.chromeBoxAlpha = clamp(body.chromeBoxAlpha, 0.05, 1);
+  }
+  if (hex(body.chromeBorder)) next.chromeBorder = body.chromeBorder.toLowerCase();
+  if (typeof body.chromeBorderAlpha === 'number' && body.chromeBorderAlpha > 0) {
+    next.chromeBorderAlpha = clamp(body.chromeBorderAlpha, 0.05, 1);
+  }
+  if (['off', 'standard', 'enhanced'].includes(body.glassIntensity)) next.glassIntensity = body.glassIntensity;
+  if (['default', 'liujian', 'zhimang', 'notoserif', 'chunfeng', 'custom'].includes(body.cjkFont)) next.cjkFont = body.cjkFont;
+  if (typeof body.autoSendEnabled === 'boolean') next.autoSendEnabled = body.autoSendEnabled;
+  if (typeof body.autoSendSeconds === 'number' && body.autoSendSeconds > 0) next.autoSendSeconds = clamp(body.autoSendSeconds, 0.5, 20);
+  if (typeof body.fadeSeconds === 'number' && body.fadeSeconds > 0) next.fadeSeconds = clamp(body.fadeSeconds, 0.3, 8);
+  if (typeof body.lingerSeconds === 'number' && body.lingerSeconds > 0) next.lingerSeconds = clamp(body.lingerSeconds, 1, 15);
+  if (typeof body.inkLingerSeconds === 'number' && body.inkLingerSeconds > 0) next.inkLingerSeconds = clamp(body.inkLingerSeconds, 0.5, 10);
+  if (typeof body.inkFadeSeconds === 'number' && body.inkFadeSeconds > 0) next.inkFadeSeconds = clamp(body.inkFadeSeconds, 0.3, 6);
+  if (typeof body.penOnly === 'boolean') next.penOnly = body.penOnly;
+  if (typeof body.replyFontScale === 'number' && body.replyFontScale > 0) next.replyFontScale = clamp(body.replyFontScale, 0.5, 1.5);
+  if (['left', 'center', 'right'].includes(body.replyAlign)) next.replyAlign = body.replyAlign;
+  if (['left', 'bottom'].includes(body.toolbarPosition)) next.toolbarPosition = body.toolbarPosition;
+  if (typeof body.confirmClearAll === 'boolean') next.confirmClearAll = body.confirmClearAll;
+  if (typeof body.confirmOnReset === 'boolean') next.confirmOnReset = body.confirmOnReset;
+  if (body.brush && typeof body.brush === 'object') next.brush = { ...s.brush, ...body.brush };
+  if (typeof body.activeProfileId === 'string' && s.profiles.some((p) => p.id === body.activeProfileId)) {
+    next.activeProfileId = body.activeProfileId;
+  }
+  return next;
+}
+
+// 新建配置槽位时同样只收认识的字段
+export function profileFromInput(body = {}) {
+  return newProfile({
+    name: (body.name || '新配置').trim(),
+    baseUrl: (body.baseUrl || '').trim(),
+    apiKey: (body.apiKey || '').trim(),
+    model: (body.model || '').trim(),
+    spec: SPECS[body.spec] ? body.spec : 'auto',
+  });
+}
+
+// 改配置槽位：就地改，只动传了的字段。
+// **密钥留空表示"不改"**，不是"清空"——页面为了不显示密钥，那个输入框平时就是空的，
+// 收到空值当清空的话，改个模型名就会把密钥抹掉。
+export function applyProfilePatch(p, body = {}) {
+  if (typeof body.name === 'string' && body.name.trim()) p.name = body.name.trim();
+  if (typeof body.baseUrl === 'string') p.baseUrl = body.baseUrl.trim();
+  if (typeof body.apiKey === 'string' && body.apiKey.trim()) p.apiKey = body.apiKey.trim();
+  if (typeof body.model === 'string') p.model = body.model.trim();
+  if (body.spec === 'auto' || SPECS[body.spec]) p.spec = body.spec;
+  return p;
+}
+
+// 改提示词卡片：标题空着就保持原样（免得手滑清空标题之后一张卡认不出是哪张）
+export function applyCardPatch(card, body = {}) {
+  if (typeof body.title === 'string') card.title = body.title.trim() || card.title;
+  if (typeof body.content === 'string') card.content = body.content;
+  if (typeof body.enabled === 'boolean') card.enabled = body.enabled;
+  return card;
 }
 
 // 生成/更新"长期记忆"类下的卡片——固定只维护这一张，重复总结会覆盖上一次的内容

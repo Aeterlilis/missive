@@ -1,19 +1,10 @@
-// 默认人设文案。实际生效的人设存在 settings.json 里，用户可在设置页自定义/重置。
+// 转接头。默认人设文案在 web/src/shared/persona.js，跟手机版共用同一份，见 ./shared.js。
+// 取值必须在 start() await 过 load() 之后，所以这里是 getter 而不是直接导出字符串。
 
-const DEFAULT_PERSONA = `有人用笔在纸上写下字，传到你这里就是纸上的墨迹。请这样回应：
+const shared = require('./shared');
+const mod = () => shared.get('persona');
 
-- 不要扮演任何角色或人设，自然、平实地回应就好，像认真读完这段话之后随手写句话回过去。
-- 回答要短：一般一到三句话，像墨迹一笔笔浮现。除非对方明确要详细解释，才展开。
-- 语气克制、真诚，不刻意搞笑、不阴阳怪气、不说教。
-
-规则：
-- 永远不要提及图像、照片、模型或 AI——你只能看到纸上用墨水写的字。
-- 如果字迹有些潦草或部分模糊，尽量根据能辨认的部分去猜对方写了什么，并据此回应。宁可猜错也别轻易放弃——把模糊当成对方字迹潦草，自然地回应你理解到的意思即可。
-- 只有在完全无法辨认任何字（整片糊掉）时，才委婉地说"这几笔没看清，能再写一遍吗"，且不要每次都说一样的话。
-- 用写字人所用的语言回答（写中文就用中文回，写英文就用英文回）。
-- 不要用 markdown 格式、列表符号、代码块——你的回答会以手写体呈现，要像手写的句子。`;
-
-// 附加在每次请求的 user 消息里的引导语（移植自 riddle）
-const INSTRUCTION = '纸上的墨迹就是对方写给你的话。请回应。';
-
-module.exports = { DEFAULT_PERSONA, INSTRUCTION };
+module.exports = {
+  get DEFAULT_PERSONA() { return mod().DEFAULT_PERSONA; },
+  get INSTRUCTION() { return mod().INSTRUCTION; },
+};

@@ -14,10 +14,11 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
+const shared = require('./shared');
 const settingsStore = require('./settings');
 const history = require('./history');
 const providers = require('./providers');
-const { INSTRUCTION } = require('./persona');
+const persona = require('./persona'); // 转接头，取值要在 shared.load() 之后，见 ./shared.js
 
 const DATA_DIR = process.env.SETTINGS_DIR || __dirname;
 const BACKGROUND_PATH = path.join(DATA_DIR, 'background.jpg');
@@ -476,7 +477,7 @@ function createApp() {
       turns: [...buildContextTurns(contextEntries), {
         role: 'user',
         parts: [
-          { type: 'text', text: INSTRUCTION },
+          { type: 'text', text: persona.INSTRUCTION },
           { type: 'image', dataUrl: currentImageDataUrl },
         ],
       }],
@@ -739,10 +740,10 @@ function parseAttuneResult(text) {
   return { poke, fallback: Object.keys(fallback).length ? fallback : null };
 }
 
-// 先 await 加载共用模块（见 ./providers.js 的说明），再开始监听。
+// 先 await 加载后端和手机版共用的那几个模块（见 ./shared.js），再开始监听。
 // 返回的 Promise 在真正 listening 之后才 resolve，调用方拿到手就能读 address()。
 async function start(port, host) {
-  await providers.load();
+  await shared.load();
   const app = createApp();
   const server = app.listen(port, host, () => {
     const addr = server.address();

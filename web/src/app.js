@@ -11,6 +11,7 @@
 //
 // 关键巧思：提交时立刻发起 AI 请求，饮墨动画的 ~1s 正好掩盖首字延迟。
 
+import { registerServiceWorker } from './pwa.js';
 import { api } from './api.js';
 import { CONFIG, BRUSH_PRESETS } from './config.js';
 import { applyGlassIntensity } from './glass.js';
@@ -1778,6 +1779,8 @@ function enhanceRangeSlider(el) {
   thumb.addEventListener('pointerup', endDrag);
   thumb.addEventListener('pointercancel', endDrag);
 }
+
+registerServiceWorker();
 
 // 启动
 window.addEventListener('DOMContentLoaded', async () => {

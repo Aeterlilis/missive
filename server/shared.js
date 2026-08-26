@@ -7,6 +7,7 @@
 
 const MODULES = {
   providers: '../web/src/shared/providers.js',
+  upstream: '../web/src/shared/upstream.js',
   persona: '../web/src/shared/persona.js',
   settingsModel: '../web/src/shared/settings-model.js',
 };

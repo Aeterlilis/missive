@@ -541,8 +541,6 @@ function createApp() {
   return app;
 }
 
-function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
-
 // 把一条历史记录摊成中立请求里的一轮（用户那半 + AI回复那半）。
 // 手写来的那半是图，打字来的那半是文字。
 function buildContextTurns(entries) {
@@ -557,43 +555,13 @@ function buildContextTurns(entries) {
   ]);
 }
 
-// 这几个状态码是"再试一次说不定就过了"：中转站对图片请求会高频 403，
-// 429/500 也常常是一阵子的事。别的错（401 密钥不对、404 模型不存在）重试没意义。
-const RETRY_STATUS = new Set([403, 429, 500]);
-
-// 往上游发一次请求，带退避重试。成功返回 fetch 的 Response，失败抛出带 status/detail 的错误。
-async function postUpstream(profile, request, { maxRetries = 8 } = {}) {
-  const { url, headers, body } = providers.buildRequest(profile, request);
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    let upstream;
-    try {
-      upstream = await fetch(url, { method: 'POST', headers, body });
-    } catch (err) {
-      console.error(`第${attempt}次连接失败:`, err.message);
-      if (attempt === maxRetries) throw upstreamError('无法连接模型服务', 502, err.message);
-      await sleep(300 * attempt);
-      continue;
-    }
-    if (upstream.ok && (!request.stream || upstream.body)) return upstream;
-
-    const detail = await upstream.text().catch(() => '');
-    if (RETRY_STATUS.has(upstream.status) && attempt < maxRetries) {
-      console.error(`第${attempt}次上游 ${upstream.status}，${attempt}s 后重试`);
-      await sleep(1000 * attempt);
-      continue;
-    }
-    console.error(`上游 ${upstream.status}:`, detail.slice(0, 300));
-    throw upstreamError('模型服务返回错误', upstream.status, detail);
-  }
-  throw upstreamError('多次重试后仍无法获取模型响应', 502);
-}
-
-function upstreamError(message, status, detail) {
-  const e = new Error(message);
-  e.status = status;
-  if (detail) e.detail = detail;
-  return e;
+// 发请求、退避重试的逻辑在 web/src/shared/upstream.js，跟手机版共用。
+// 这里只多挂一个打日志的旁观者——浏览器里不需要往控制台刷这些。
+function postUpstream(profile, request, opts = {}) {
+  return shared.get('upstream').postUpstream(profile, request, {
+    ...opts,
+    onRetry: (msg) => console.error(msg),
+  });
 }
 
 function sendUpstreamError(res, e) {
@@ -609,41 +577,21 @@ async function pipeStream(res, upstream, profile, onFinish) {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders?.();
 
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  let sseBuffer = '';
   let tokenCount = 0;
   let fullText = '';
   const startedAt = Date.now();
 
-  const finish = () => {
+  try {
+    // 拆流的逻辑在 web/src/shared/upstream.js，跟手机版共用
+    for await (const piece of shared.get('upstream').readTokens(upstream, profile)) {
+      tokenCount++;
+      fullText += piece;
+      res.write(`data: ${JSON.stringify(piece)}\n\n`);
+    }
     res.write('data: [DONE]\n\n');
     console.log(`✓ 完成 ${tokenCount} token，用时 ${Date.now() - startedAt}ms`);
     onFinish(fullText);
     res.end();
-  };
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      sseBuffer += decoder.decode(value, { stream: true });
-
-      let nl;
-      while ((nl = sseBuffer.indexOf('\n\n')) !== -1) {
-        const eventBlock = sseBuffer.slice(0, nl);
-        sseBuffer = sseBuffer.slice(nl + 2);
-        const result = providers.parseDelta(profile, eventBlock);
-        if (result === providers.DONE) return finish();
-        if (result) {
-          tokenCount++;
-          fullText += result;
-          res.write(`data: ${JSON.stringify(result)}\n\n`);
-        }
-      }
-    }
-    // Gemini 不发结束事件，流断了就是完了
-    finish();
   } catch (err) {
     console.error('转发中断:', err.message);
     if (!res.headersSent) {
@@ -668,25 +616,7 @@ async function requestSummary(profile, contextEntries) {
     ],
   };
   const upstream = await postUpstream(profile, request, { maxRetries: 4 });
-
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  let sseBuffer = '';
-  let fullText = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    sseBuffer += decoder.decode(value, { stream: true });
-    let nl;
-    while ((nl = sseBuffer.indexOf('\n\n')) !== -1) {
-      const block = sseBuffer.slice(0, nl);
-      sseBuffer = sseBuffer.slice(nl + 2);
-      const result = providers.parseDelta(profile, block);
-      if (result === providers.DONE) return fullText;
-      if (result) fullText += result;
-    }
-  }
-  return fullText;
+  return shared.get('upstream').readAllText(upstream, profile);
 }
 
 const FALLBACK_KINDS = ['unreadable', 'distracted', 'blank'];

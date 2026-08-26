@@ -10,8 +10,13 @@
   /* 刘海屏/挖孔屏顶上和底下被系统占掉的那几截。没有的机器上是 0，写法照常成立。
      所有贴边固定的东西（顶栏、导航、右上角那组入口、工具栏）都得让开这些距离，
      不然内容会钻到刘海底下去。 */
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* 两个来源取大的那个：
+     - env() 是浏览器自己报的，网页版和新版 WebView 上准。
+     - --safe-area-inset-* 是安卓版的 MainActivity 注入的（写在 <html> 的内联样式上）。
+       WebView 版本低于 140 时 env() 会一律报 0，只能靠它。网页版上这个变量不存在，
+       取 0px 兜底，于是等价于只看 env()。 */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
 
   --ink: #000000;
   --ink-faint: rgba(0, 0, 0, 0.15);

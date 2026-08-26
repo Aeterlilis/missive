@@ -8,6 +8,10 @@
 // 写死 '/sw.js' 会指到站点根目录去，注册必然失败。
 
 export function registerServiceWorker() {
+  // 安卓版（Capacitor 套壳）不注册。那一版的整个 web/ 已经原样装进 APK 里了，页面是从
+  // 本机文件读的，再套一层缓存没有任何好处，反而多一条"装了新版本还在吃旧缓存"的路
+  // ——sw.js 靠 VERSION 决定要不要换，而 APK 换版本时那个号未必动过。
+  if (window.Capacitor?.isNativePlatform?.()) return;
   if (!('serviceWorker' in navigator)) return;
   const swUrl = new URL('../sw.js', import.meta.url);
   // 等页面加载完再注册：注册本身会去下载整个外壳，跟首屏抢带宽不值得

@@ -12,7 +12,7 @@
 // ⚠️ 每次发新版都要把这个号往上加，否则装过的机器永远吃老的那份。
 // 浏览器是靠"sw.js 这个文件本身变没变"来决定要不要重装的——版本号不动，
 // 底下那一堆文件就算全改了，它也不会重新去取。
-const VERSION = 'missive-v3';
+const VERSION = 'missive-v4';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -116,7 +116,7 @@ self.addEventListener('fetch', (event) => {
       // 只存正经成功的。opaque 响应（跨域且没开 CORS）状态码读出来是 0，
       // 存下来的是个空壳，下次命中就等于拿到一个坏文件。
       if (res && res.ok && res.type === 'basic') {
-        assets.put(keyOf(req), res.clone());
+        assets.put(req, res.clone());
       }
       return res;
     } catch (e) {

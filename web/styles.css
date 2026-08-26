@@ -104,7 +104,7 @@ body.debug #debug { display: block; }
 #thinking-icon {
   position: fixed;
   right: 16px;
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(14px + var(--safe-bottom));
   transform: translate(var(--icon-bleed, 0px), var(--icon-bleed, 0px));
   z-index: 5;
   pointer-events: none;
@@ -194,7 +194,7 @@ body.toolbar-bottom #toolbar {
   flex-direction: row;
   left: 0;
   right: 0;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(16px + var(--safe-bottom));
   justify-content: center;
   pointer-events: none;
 }
@@ -228,7 +228,7 @@ body.toolbar-left #confirm-box.at-toolbar {
 }
 body.toolbar-bottom #brush-panel,
 body.toolbar-bottom #confirm-box.at-toolbar {
-  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(70px + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
 }

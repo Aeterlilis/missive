@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用图标和启动画面的底色。取自 web/icon.png 里那块深色底，图标叠上去看不出接缝。 -->
+    <color name="ic_launcher_background">#383031</color>
+    <color name="splash_background">#383031</color>
+</resources>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- 应用跑起来之后真正用的主题（BridgeActivity.onCreate 里换过来）。
+         系统栏画成透明：MainActivity 平时把它们整个收起来，但用户从边缘划一下会临时叫回来，
+         那一下叫回来的应该是浮在纸面上的一层，而不是从顶上切走一条。 -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+
+    <!-- 启动那一瞬间的主题（写在 AndroidManifest 上）。窗口是按这个主题建的，所以
+         "画进挖孔"必须也写在这儿一份——等 BridgeActivity 换到上面那个主题时窗口早就建好了。
+         MainActivity 另外还会用代码再设一次，两处都留着是因为代码那次能设 ALWAYS（横屏也算）。 -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <!-- 安卓 12 以下：整块窗口背景就是启动画面那张图。 -->
+        <item name="android:windowBackground">@drawable/splash</item>
+        <!-- 安卓 12 及以上：启动画面由系统画，只认下面这两项（底色 + 中间那个图标）。 -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

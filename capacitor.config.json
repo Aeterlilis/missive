@@ -1,0 +1,10 @@
+{
+  "appId": "com.aeterlilis.missive",
+  "appName": "Missive",
+  "webDir": "web",
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "disable"
+    }
+  }
+}

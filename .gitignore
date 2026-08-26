@@ -20,3 +20,11 @@ dist/
 
 # Claude Code 的本地工作文件
 .claude/
+
+# 安卓版：构建产物和签名文件
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/*.jks
+android/keystore.properties

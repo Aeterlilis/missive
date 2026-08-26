@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 启动那一下的画面：一块底色 + 居中的图标。安卓 12 以下用这张（主题里的 windowBackground），
+     12 及以上系统自己画，用的是主题里 windowSplashScreen* 那几项。
+     用 XML 而不是 png 是为了不管什么屏幕比例都不会被拉变形。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item android:gravity="center">
+        <bitmap
+            android:src="@mipmap/ic_launcher_foreground"
+            android:gravity="center" />
+    </item>
+</layer-list>

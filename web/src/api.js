@@ -70,7 +70,10 @@ function forcedMode() {
 // 改成"先把 api 交出去，第一次真正调用时才等模式定下来"。反正所有方法本来就是异步的，
 // 调用方一个字都不用改。
 export const apiReady = (async () => {
-  const mode = forcedMode() || ((await serverAlive()) ? 'remote' : 'local');
+  // 安卓版（Capacitor 套壳）必然是本地模式，不用探——那儿没有任何服务，探一次只是白等，
+  // 而且它给不存在的路径回的是首页，跟静态托管一样有认错的余地。
+  const native = !!window.Capacitor?.isNativePlatform?.();
+  const mode = forcedMode() || (native ? 'local' : (await serverAlive()) ? 'remote' : 'local');
   window.__apiMode = mode; // 排查问题时在控制台敲 __apiMode 就知道当前是哪套
   return mode === 'local' ? local : remote;
 })();

@@ -12,7 +12,7 @@
 // ⚠️ 每次发新版都要把这个号往上加，否则装过的机器永远吃老的那份。
 // 浏览器是靠"sw.js 这个文件本身变没变"来决定要不要重装的——版本号不动，
 // 底下那一堆文件就算全改了，它也不会重新去取。
-const VERSION = 'missive-v5';
+const VERSION = 'missive-v6';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 

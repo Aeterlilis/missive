@@ -1,5 +1,6 @@
 // history.js —— 历史记录页：按"对话"分组成卡片 + 点开看这次对话写了哪几页 + 详情/删除
 
+import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
 
 const listEl = document.getElementById('list');
@@ -14,7 +15,8 @@ function applyTheme(theme, bgColor) {
   bgEl.style.background = '';
   if (theme === 'custom') {
     bgEl.classList.add('theme-custom');
-    bgEl.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+    // 地址是现问出来的（本地模式下要去 IndexedDB 里取），所以贴上去这一步天生慢一拍
+    api.backgroundImageUrl().then((url) => { bgEl.style.backgroundImage = `url(${url})`; });
   } else if (theme === 'solid') {
     bgEl.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
@@ -44,7 +46,7 @@ function applyChromeTheme(s) {
   // 边框颜色/透明度是独立的 --border-color（见上面），不归它管。
   applyGlassIntensity(s.glassIntensity);
 }
-fetch('/api/settings').then((r) => r.json()).then((s) => { applyTheme(s.theme, s.bgColor); applyChromeTheme(s); }).catch(() => {});
+api.getSettings().then((s) => { applyTheme(s.theme, s.bgColor); applyChromeTheme(s); }).catch(() => {});
 
 function fmtDate(iso) {
   const d = new Date(iso);
@@ -74,8 +76,7 @@ function groupByConversation(entries) {
 }
 
 async function load() {
-  const res = await fetch('/api/history');
-  const entries = await res.json();
+  const entries = await api.listHistory();
   listEl.innerHTML = '';
   emptyHint.style.display = entries.length === 0 ? 'block' : 'none';
   for (const group of groupByConversation(entries)) {
@@ -182,7 +183,7 @@ function buildEntryEl(entry) {
   delBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
     if (!confirm('删除这条记录？删了就没了。')) return;
-    await fetch('/api/history/' + entry.id, { method: 'DELETE' });
+    await api.deleteHistoryEntry(entry.id);
     await load();
   });
   detail.appendChild(reply);

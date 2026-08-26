@@ -1,6 +1,7 @@
 // settings.js —— 设置页逻辑：多配置槽位的读写 + 拉取模型列表 + 全局设置。
 // v2：卡片化——API配置/人设/记忆都是"堆叠→点开→点进单张编辑"的卡片，系统提示词是平铺开关列表。
 
+import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
 
 const form = document.getElementById('form');
@@ -34,7 +35,8 @@ function applyTheme(theme, bgColor) {
   bgEl.style.background = ''; // 先清掉上一个主题可能留下的内联背景（自定义图片/纯色都是内联设的）
   if (theme === 'custom') {
     bgEl.classList.add('theme-custom');
-    bgEl.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+    // 地址是现问出来的（本地模式下要去 IndexedDB 里取），所以贴上去这一步天生慢一拍
+    api.backgroundImageUrl().then((url) => { bgEl.style.backgroundImage = `url(${url})`; });
   } else if (theme === 'solid') {
     bgEl.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
@@ -94,13 +96,7 @@ function setupCjkFontPills() {
     const prevText = customPill.textContent;
     customPill.textContent = '上传中…';
     try {
-      const res = await fetch('/api/cjk-font', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename, fontDataBase64: base64 }),
-      });
-      const out = await res.json();
-      if (!res.ok) throw new Error(out.error || '上传失败');
+      const out = await api.saveCjkFont({ filename, fontDataBase64: base64 });
       setActive('custom');
       customPill.textContent = out.cjkFontName;
       setStatus('字体已上传并选中，写字页刷新一下就能看到效果，记得点保存');
@@ -760,13 +756,7 @@ function buildProfileCard(profile) {
     fetchBtn.disabled = true;
     modelStatus.textContent = '拉取中…';
     try {
-      const res = await fetch('/api/models', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseUrl, apiKey, profileId: profile.id, spec: specSelect.value }),
-      });
-      const out = await res.json();
-      if (!res.ok) throw new Error(out.error || '拉取失败');
+      const out = await api.listModels({ baseUrl, apiKey, profileId: profile.id, spec: specSelect.value });
       datalist.innerHTML = '';
       for (const m of out.models) {
         const opt = document.createElement('option');
@@ -801,9 +791,7 @@ function buildProfileCard(profile) {
     if (data.profiles.length <= 1) { setStatus('至少要留一个配置', true); return; }
     if (!confirm(`删除配置"${profile.name}"？`)) return;
     try {
-      const res = await fetch('/api/profiles/' + profile.id, { method: 'DELETE' });
-      const out = await res.json();
-      if (!res.ok) throw new Error(out.error || '删除失败');
+      await api.deleteProfile(profile.id);
       await load();
       setStatus('已删除');
     } catch (err) {
@@ -864,8 +852,7 @@ function buildPromptCard(cardData) {
   card.appendChild(buildDeleteFab(async () => {
     if (!confirm(`删除卡片"${cardData.title}"？`)) return;
     try {
-      const res = await fetch('/api/cards/' + cardData.id, { method: 'DELETE' });
-      if (!res.ok) throw new Error((await res.json()).error || '删除失败');
+      await api.deleteCard(cardData.id);
       await load();
       setStatus('已删除');
     } catch (err) {
@@ -931,12 +918,7 @@ document.querySelectorAll('[data-add]').forEach((btn) => {
   btn.addEventListener('click', async () => {
     const category = btn.dataset.add;
     try {
-      const res = await fetch('/api/cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, title: '新卡片', content: '' }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error || '创建失败');
+      await api.createCard({ category, title: '新卡片', content: '' });
       if (category in stackState) stackState[category] = false;
       await load();
       setStatus('已新建卡片，写好内容记得保存');
@@ -955,8 +937,7 @@ $('btn-attune')?.addEventListener('click', async (e) => {
   btn.classList.add('working');
   btn.textContent = '…';
   try {
-    const res = await fetch('/api/poke-lines/generate', { method: 'POST' });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `请求失败 ${res.status}`);
+    await api.generatePokeLines();
     btn.classList.remove('working');
     btn.classList.add('done');
     btn.textContent = '磨合';
@@ -970,13 +951,7 @@ $('btn-attune')?.addEventListener('click', async (e) => {
 
 $('addProfile').addEventListener('click', async () => {
   try {
-    const res = await fetch('/api/profiles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: '新配置' }),
-    });
-    const out = await res.json();
-    if (!res.ok) throw new Error(out.error || '创建失败');
+    const out = await api.createProfile({ name: '新配置' });
     currentProfileId = out.profile.id;
     stackState.profiles = false;
     await load();
@@ -988,8 +963,7 @@ $('addProfile').addEventListener('click', async () => {
 
 async function load() {
   try {
-    const res = await fetch('/api/settings');
-    data = await res.json();
+    data = await api.getSettings();
     if (currentProfileId == null || !data.profiles.some((p) => p.id === currentProfileId)) {
       currentProfileId = data.activeProfileId;
     }
@@ -1039,7 +1013,7 @@ async function load() {
 
     const customPill = $('customThemePill');
     if (data.hasCustomBackground) {
-      customPill.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+      api.backgroundImageUrl().then((url) => { customPill.style.backgroundImage = `url(${url})`; });
       customPill.classList.add('has-image');
       customPill.textContent = '';
     } else {
@@ -1073,13 +1047,7 @@ $('bgFile').addEventListener('change', async () => {
   customPill.textContent = '上传中…';
   try {
     const imageDataUrl = await resizeImageToDataUrl(file, 1920, 0.85);
-    const res = await fetch('/api/background', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageDataUrl }),
-    });
-    const out = await res.json();
-    if (!res.ok) throw new Error(out.error || '上传失败');
+    await api.saveBackground(imageDataUrl);
     themePills.setActive('custom');
     applyTheme('custom', bgColorHex);
     syncBgPickerVisibility('custom');
@@ -1132,13 +1100,7 @@ async function doResetContext(summarize) {
   btn.disabled = true;
   setStatus(summarize ? '正在总结…' : '重置中…');
   try {
-    const res = await fetch('/api/context/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ summarize }),
-    });
-    const out = await res.json();
-    if (!res.ok) throw new Error(out.error || '重置失败');
+    const out = await api.resetContext({ summarize });
     $('contextCount').textContent = 0;
     if (out.memoryCard) {
       stackState.long_term_memory = false;
@@ -1168,11 +1130,7 @@ async function saveAll() {
       };
       const apiKey = el.querySelector('.field-apikey').value.trim();
       if (apiKey) body.apiKey = apiKey;
-      return fetch('/api/profiles/' + id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      return api.updateProfile(id, body);
     }));
 
     // 2. 保存所有提示词卡片（标题/内容/开关），堆叠里的和平铺的都用同一个 .prompt-card 类选
@@ -1182,50 +1140,41 @@ async function saveAll() {
       const title = el.querySelector('.field-title').value;
       const content = el.querySelector('.field-content').value;
       const enabled = el.querySelector('.field-enabled').checked;
-      return fetch('/api/cards/' + id, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, enabled }),
-      });
+      return api.updateCard(id, { title, content, enabled });
     }));
 
     // 3. 保存全局设置 + 把当前选中的配置设为使用中
     const font = fontPills.getActive() || 'pinyon';
     const theme = themePills.getActive() || 'white';
-    const gRes = await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        maxTokens: parseInt($('maxTokens').value, 10) || 280,
-        speed: parseInt($('speed').value, 10) || 6,
-        font,
-        theme,
-        themeColor: themeColorHex,
-        bgColor: bgColorHex,
-        chromeTheme: chromeThemePills.getActive() || 'day',
-        chromeInk: chromeInkHex,
-        chromeBox: chromeBoxHex,
-        chromeBoxAlpha: chromeBoxAlpha,
-        chromeBorder: chromeBorderHex,
-        chromeBorderAlpha: chromeBorderAlpha,
-        glassIntensity: glassPills.getActive() || 'standard',
-        cjkFont: cjkFontPills.getActive(),
-        autoSendEnabled: $('autoSendEnabled').checked,
-        autoSendSeconds: parseFloat($('autoSendSeconds').value) || 2.8,
-        fadeSeconds: parseFloat($('fadeSeconds').value) || 1.5,
-        lingerSeconds: parseFloat($('lingerSeconds').value) || 7,
-        inkLingerSeconds: parseFloat($('inkLingerSeconds').value) || 2,
-        inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
-        penOnly: $('penOnly').checked,
-        replyFontScale: parseFloat($('replyFontScale').value) || 1,
-        replyAlign: alignPills.getActive() || 'center',
-        toolbarPosition: toolbarPills.getActive() || 'left',
-        confirmClearAll: $('confirmClearAll').checked,
-        confirmOnReset: $('confirmOnReset').checked,
-        activeProfileId: currentProfileId,
-      }),
+    await api.saveSettings({
+      maxTokens: parseInt($('maxTokens').value, 10) || 280,
+      speed: parseInt($('speed').value, 10) || 6,
+      font,
+      theme,
+      themeColor: themeColorHex,
+      bgColor: bgColorHex,
+      chromeTheme: chromeThemePills.getActive() || 'day',
+      chromeInk: chromeInkHex,
+      chromeBox: chromeBoxHex,
+      chromeBoxAlpha: chromeBoxAlpha,
+      chromeBorder: chromeBorderHex,
+      chromeBorderAlpha: chromeBorderAlpha,
+      glassIntensity: glassPills.getActive() || 'standard',
+      cjkFont: cjkFontPills.getActive(),
+      autoSendEnabled: $('autoSendEnabled').checked,
+      autoSendSeconds: parseFloat($('autoSendSeconds').value) || 2.8,
+      fadeSeconds: parseFloat($('fadeSeconds').value) || 1.5,
+      lingerSeconds: parseFloat($('lingerSeconds').value) || 7,
+      inkLingerSeconds: parseFloat($('inkLingerSeconds').value) || 2,
+      inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
+      penOnly: $('penOnly').checked,
+      replyFontScale: parseFloat($('replyFontScale').value) || 1,
+      replyAlign: alignPills.getActive() || 'center',
+      toolbarPosition: toolbarPills.getActive() || 'left',
+      confirmClearAll: $('confirmClearAll').checked,
+      confirmOnReset: $('confirmOnReset').checked,
+      activeProfileId: currentProfileId,
     });
-    if (!gRes.ok) throw new Error('设置保存失败');
 
     setStatus('已保存');
     await load();

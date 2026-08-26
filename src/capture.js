@@ -1,10 +1,11 @@
-// capture.js —— 把当前笔迹裁剪+降采样成 PNG，POST 给后端 /interpret
+// capture.js —— 把当前笔迹裁剪+降采样成 PNG，交给 api.js 发出去（发给谁归它管）
 // 逻辑移植自 riddle 的 Ink::to_png：
 //   - 取所有笔画的包围盒，外扩 padding
 //   - 长边降采样到 ≤ PNG_MAX_LONG_SIDE，且至少降 PNG_MIN_DOWNSCALE 倍
 //   - 取灰度（墨水屏本就是黑白，绿通道近似亮度）
 //   - 导出为 PNG
 
+import { api } from './api.js';
 import { CONFIG } from './config.js';
 
 // 从主画布裁出笔迹区域并降采样，返回 PNG Blob
@@ -80,18 +81,14 @@ function explainThrown(e) {
   return e && e.message ? e.message : '未知错误';
 }
 
-// 把笔迹 PNG POST 到后端，返回一个流式 reader（见 oracle.js 消费）
-// 带重试：中转站偶发 403/超时，后端会重试，前端也重试以匹配。
+// 把笔迹 PNG 发出去，返回一个流式 reader（见 oracle.js 消费）
+// 带重试：中转站偶发 403/超时，发请求那一层自己也会重试，这里再兜一道。
 // 但配置类错误（4xx）不重试——密钥填错了，重试三次还是错，白等两秒。
 export async function postInterpret(blob) {
   let lastErr = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch('/interpret', {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/png' },
-        body: blob,
-      });
+      const res = await api.interpretInk(blob);
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
         lastErr = new Error(explainHttpError(res.status, detail));
@@ -120,16 +117,12 @@ export async function postInterpret(blob) {
   throw lastErr || new Error('多次重试后仍失败');
 }
 
-// 打字模式：把文字 POST 到 /interpret-text（JSON body），返回值和 postInterpret 一样是流式 reader
+// 打字模式：发的是文字不是图，返回值和 postInterpret 一样是流式 reader
 export async function postInterpretText(text) {
   let lastErr = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch('/interpret-text', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      const res = await api.interpretText(text);
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
         lastErr = new Error(explainHttpError(res.status, detail));

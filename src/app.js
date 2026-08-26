@@ -11,6 +11,7 @@
 //
 // 关键巧思：提交时立刻发起 AI 请求，饮墨动画的 ~1s 正好掩盖首字延迟。
 
+import { api } from './api.js';
 import { CONFIG, BRUSH_PRESETS } from './config.js';
 import { applyGlassIntensity } from './glass.js';
 import { InkLayer } from './ink.js';
@@ -929,7 +930,7 @@ const CUSTOM_CJK_FAMILY = 'MissiveCustomCJK'; // 不带空格，避免 canvas fo
 async function loadCjkFont(s) {
   if (s.cjkFont === 'custom' && s.hasCjkFont) {
     try {
-      const face = new FontFace(CUSTOM_CJK_FAMILY, `url(/api/cjk-font-file?t=${Date.now()})`);
+      const face = new FontFace(CUSTOM_CJK_FAMILY, `url(${await api.cjkFontUrl()})`);
       await face.load();
       document.fonts.add(face);
       CONFIG.CJK_FONT = CUSTOM_CJK_FAMILY;
@@ -950,9 +951,7 @@ let brushByPreset = {};
 // 拉不到就用默认值，不阻塞启动。
 async function loadRuntimeConfig() {
   try {
-    const res = await fetch('/api/settings');
-    if (!res.ok) return;
-    const s = await res.json();
+    const s = await api.getSettings();
     if (s.font) CONFIG.LATIN_FONT = LATIN_FONT_MAP[s.font] || LATIN_FONT_MAP.pinyon;
     await loadCjkFont(s);
     // 提示语的字体不用在这里管了：它现在走 scribe，跟 AI 回复共用同一套按内容判断
@@ -1065,7 +1064,8 @@ function applyTheme(theme, bgColor) {
   document.body.style.background = ''; // 先清掉上一个主题可能留下的内联背景（自定义图片/纯色都是内联设的）
   if (theme === 'custom') {
     document.body.classList.add('theme-custom');
-    document.body.style.backgroundImage = `url(/api/background-image?t=${Date.now()})`;
+    // 地址是现问出来的（本地模式下要去 IndexedDB 里取），所以贴上去这一步天生慢一拍
+    api.backgroundImageUrl().then((url) => { document.body.style.backgroundImage = `url(${url})`; });
   } else if (theme === 'solid') {
     document.body.style.background = bgColor || '#ffffff';
   } else if (theme && theme !== 'white') {
@@ -1207,13 +1207,7 @@ function bindToolbar(app) {
     btnResetContext.disabled = true;
     if (summarize) toast('正在总结这段对话…');
     try {
-      const res = await fetch('/api/context/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summarize }),
-      });
-      const out = await res.json();
-      if (!res.ok) throw new Error(out.error || '重置失败');
+      const out = await api.resetContext({ summarize });
       toast(out.memoryCard ? '对话已重置，长期记忆已更新' : '对话已重置，下一页开始是全新的');
     } catch (err) {
       toast('重置失败：' + err.message);
@@ -1302,11 +1296,7 @@ function bindToolbar(app) {
     };
     if (typeof CONFIG.BRUSH_PARAMS.nibAngleDeg === 'number') brush.nibAngleDeg = CONFIG.BRUSH_PARAMS.nibAngleDeg;
     try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brush }),
-      });
+      await api.saveSettings({ brush });
     } catch (err) {
       console.warn('保存笔刷失败', err);
     }

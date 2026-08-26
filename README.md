@@ -4,146 +4,114 @@
 
 # Missive
 
-**在屏幕上写一句话，纸会把它吸走，然后用手写体一笔一笔回答你。**
+在屏幕上手写，AI 读完后以手写体回复。
 
-[**⬇ 下载 Windows 版**](../../releases/latest) · 双击安装，一路下一步
-
-[**⬇ 下载安卓版**](../../releases/latest) · 手机、平板都能装 · 全屏
-
-用 iPhone、iPad，或者不想装东西 → [**直接在浏览器里打开**](https://aeterlilis.github.io/missive/)
+[**下载 Windows 版**](../../releases/latest) · [**下载安卓版**](../../releases/latest) · [**浏览器打开**](https://aeterlilis.github.io/missive/)
 
 </div>
 
 ---
 
-## 这是什么
+## 简介
 
-一张纸，一支笔。
+一块全屏画布，支持鼠标、触屏与手写笔。写完停笔数秒，笔迹淡去，回复随即在纸面上逐笔浮现，停留片刻后散开。界面上只有纸和墨。
 
-你用鼠标、触屏或手写笔在上面写点什么，停笔几秒，写下的字会像墨水被纸吸走一样淡去。然后回答从纸面上浮现出来，一笔一笔写出来的那种，写完停一会儿，再散掉。
+## 安装
 
-屏幕上从头到尾只有纸和墨。
-
-## 怎么开始用
-
-**第一步：装上**
-
-三种用法，挑一种就行，设置和历史各自存在各自的设备上。
-
-| 设备 | 怎么开始 |
+| 平台 | 方式 |
 |---|---|
-| **Windows 电脑** | 到 [Releases 页面](../../releases/latest) 下载 `Missive-Setup-1.1.0.exe`，双击，一路下一步。装完桌面和开始菜单里都会有图标 |
-| **安卓手机 / 平板** | 到 [Releases 页面](../../releases/latest) 下载 `Missive-1.1.0.apk`，传到设备上点一下安装。也可以直接把这个文件发给别人 |
-| **iPhone / iPad / 其它** | 浏览器打开 [aeterlilis.github.io/missive](https://aeterlilis.github.io/missive/)，在浏览器菜单里选「添加到主屏幕」，之后就跟一个应用一样 |
+| Windows | 下载 `Missive-Setup-1.1.0.exe`，双击安装 |
+| 安卓手机 / 平板 | 下载 `Missive-1.1.0.apk`，在设备上安装。此文件可直接转发 |
+| iPhone / iPad / 其它 | 浏览器打开 [网页版](https://aeterlilis.github.io/missive/)，经菜单「添加到主屏幕」 |
 
-电脑版安装到你自己的用户目录，全程不需要管理员权限。不想要了在「设置 → 应用」里正常卸载就行，写的日记会留着（存在 `%APPDATA%\Missive`，想清干净的话把这个文件夹也删掉）。
+设置与历史按设备各自存储，设备之间不同步。
 
-安卓版是整块屏幕铺满的，纸一直铺到屏幕边缘，顶上不留系统状态栏。想看时间就从屏幕顶上往下划一点，状态栏会临时露出来，松手自己收回去。
+Windows 版安装至当前用户目录，不需要管理员权限；卸载后数据保留在 `%APPDATA%\Missive`。
 
-**第二步：填一次密钥**
+安卓版全屏运行，隐藏系统栏。自屏幕顶部下滑可临时唤出状态栏。
 
-第一次打开会提示你还没配置。点右上角的**设置图标**（两根横杠、上面各卡着一个圆点的那个）进设置，最上面那张卡片填三样东西：
+## 配置
 
-| 填什么 | 说明 |
+首次启动需在设置页填写 API 信息。笔迹由 AI 识别，所选模型必须支持图像输入。用量计费在使用者自己的账号下。
+
+| 项 | 说明 |
 |---|---|
-| 接口规范 | 默认「自动识别」，按你填的 URL 判断。判错了再手动改 |
-| API 基础 URL | 服务商给你的地址，长得像 `https://xxx.com/v1` |
-| API 密钥 | 一长串以 `sk-` 开头的字符 |
-| 模型 | 选一个**能看图**的模型，比如 `gpt-4o-mini` |
+| 接口规范 | 默认自动识别，可手动指定 |
+| API 基础 URL | 形如 `https://xxx.com/v1` |
+| API 密钥 | 服务商处获取 |
+| 模型 | 须支持图像输入，如 `gpt-4o-mini` |
 
-> **为什么要这一步**：写在纸上的字是靠 AI 认出来的，得有个 AI 服务才能回答你。这个服务按用量收费，所以每个人得用自己的账号——填一次，之后就一直记着了。
->
-> 密钥在哪弄：去任意一家 AI 服务商注册，在后台复制出来。**模型一定要挑支持读图的**，纯文字模型认不出你写的字。
+支持的接口规范：
 
-支持四种接口规范，常见的服务商基本都在里面：
-
-| 规范 | 谁在用 |
+| 规范 | 适用 |
 |---|---|
-| OpenAI Chat Completions | DeepSeek、硅基流动、OpenRouter、智谱、Kimi、本地跑的 Ollama / LM Studio，以及大部分中转站 |
-| OpenAI Responses | OpenAI 官方，以及 Codex 专用的中转站 |
+| OpenAI Chat Completions | DeepSeek、硅基流动、OpenRouter、智谱、Kimi、Ollama、LM Studio 及多数中转 |
+| OpenAI Responses | OpenAI 官方及 Codex 中转 |
 | Anthropic Messages | Claude 官方 |
 | Google Gemini | Gemini 官方 |
 
-可以建好几套配置各填一家，在设置页里随时切换。
+可建立多套配置并随时切换。
 
-**第三步：写**
+## 可调项
 
-在纸上写字 → 停笔 → 等它回你。不想手写就点笔旁边的键盘图标，打的字也会浮现在纸上。
+- **纸张**：宣纸、羊皮纸、皱纸、水彩、纯黑，或自定义图片
+- **字体**：五种中文手写体、六种西文花体，或自定义 TTF
+- **笔刷**：六种，粗细、笔尖角度与颜色可调，各自记忆
+- **时序**：笔迹停留与淡出时长、回复停留与散去时长
+- **界面**：主题色、界面底色、玻璃强度、工具栏位置、日夜配色
+- **人设**：系统提示词与回应语气可自行编写
 
-## 能调什么
-
-点右上角设置图标进去，几乎所有你能看到的东西都能改：
-
-- **纸**：宣纸、羊皮纸、皱纸、水彩、纯黑五种预设，也能传自己的图
-- **字**：五种中文字体（文楷、草书、行书、宋体、春风楷）、六种西文花体，也能传自己的 TTF
-- **笔**：平笔或尖笔，粗细、颜色随便调
-- **节奏**：你写的字停留多久才被吸走、回答停留多久才散掉
-- **颜色**：主题色、界面底色、日夜主题
-- **它怎么说话**：AI 的语气和人设可以自己写，也能一键改回默认
-
-写过的东西都存在**历史**页里，包括当时纸面的样子。
+历史页保留每轮记录，含当时的纸面截图。
 
 ## 常见问题
 
-**双击弹出蓝底的「Windows 已保护你的电脑」**
-点那行小字 **「更多信息」**，下面会出现 **「仍要运行」**，点它就行。出现这个提示是因为这个程序没有买微软的数字签名证书（一年好几千），跟安不安全无关。不放心的话代码全在这个仓库里，可以自己看、自己打包。
+**Windows 弹出「已保护你的电脑」** — 点「更多信息」，再点「仍要运行」。安装包未做代码签名。
 
-**杀毒软件报毒 / 直接给我删了**
-同上，没有签名的安装包容易被误判。在杀毒软件里把它加进白名单，或者从回收站还原。发布之前每个版本都过了 Windows Defender 全盘扫描。
+**杀毒软件报毒或自动删除** — 未签名安装包的常见误报。加入白名单，或从回收站还原。每个版本发布前经 Windows Defender 扫描。
 
-**安卓上提示「未知来源」/「此应用可能有害」**
-安卓对所有不是从应用商店装的包都会这么提示，跟这个包本身没关系。按提示允许一次就行。介意的话代码全在这个仓库里，可以自己看、自己打包。
+**安卓提示「未知来源」** — 按系统提示允许一次即可。
 
-**打开是黑的 / 转圈半天没反应**
-电脑版第一次启动要加载字体，等十几秒。还是不行就关掉重开一次。安卓版字体是打进包里的，不用等。
+**启动黑屏或长时间无响应** — Windows 版首次启动需加载字体，约十余秒；仍无响应则重启程序。安卓版字体已内置，无此步骤。
 
-**写完没反应，弹出「还没配置 API」**
-密钥没填或者填错了。回设置检查那三栏，注意 URL 结尾一般要有 `/v1`。
+**提示「还没配置 API」** — API 信息未填或有误。URL 通常以 `/v1` 结尾。
 
-**回答说「这几笔没看清」**
-字太潦草或者太小了，写大一点。也可能是模型不支持读图，换一个带视觉的模型。
+**回复称字迹看不清** — 字写得过小或过于潦草。也可能是模型不支持图像输入。
 
-**能在 iPad / 平板上用吗**
-可以。安卓平板装 APK，iPad 用浏览器打开网页版再「添加到主屏幕」。鸿蒙平板实测可以用卓易通装 APK。
+**平板可用吗** — 安卓平板直接装 APK；iPad 用网页版。鸿蒙平板经卓易通可安装 APK。
 
-**手写笔的压感有用吗**
-有用。钢笔、圆珠笔、马克笔、毛笔的粗细都跟着下笔力度走，「尖笔」那档尤其明显。
+**支持手写笔压感吗** — 支持。钢笔、圆珠笔、马克笔、毛笔的线宽随压力变化，尖笔尤为明显。
 
-**换了设备，之前写的还在吗**
-不在。设置和历史各存各的，装在哪台设备上就只在哪台设备上——包括 API 密钥，每台都要重填一次。
+**换设备后数据还在吗** — 不在。设置、历史与 API 密钥均不跨设备，需重新配置。
 
-**我的日记会被上传吗**
-写的内容会发给你自己填的那家 AI 服务用来生成回答，这是它工作的必要条件。除此之外不往任何地方传，历史记录只存在你自己的设备上。
+**书写内容会上传吗** — 会发送至所配置的 AI 服务用于生成回复，除此之外不外传。历史仅存于本机。
 
 ---
 
 <details>
-<summary><b>给会写代码的人：自己跑源码</b></summary>
+<summary><b>自行构建</b></summary>
 
 <br>
 
-`web/` 是一堆静态文件，拿任意静态服务器伺候它就能跑，设置和历史存在浏览器的 IndexedDB 里，AI 请求由页面直接发。`http://localhost:xxxx/?mouse` 的 `?mouse` 让鼠标也能写字。
+`web/` 为静态文件，任意静态服务器即可运行；设置与历史存于 IndexedDB，AI 请求由页面直接发出。地址加 `?mouse` 允许鼠标书写。
 
-也可以跑那个 Node 服务（`cd server && npm install && npm start`，浏览器开 `http://localhost:3000`），那时设置和历史改存在服务端。页面开机探一次 `/api/health` 自己决定走哪套，`?storage=local` / `?storage=remote` 可以强制指定。
-
-打包：
+亦可运行 `server/` 下的 Node 服务（`npm install && npm start`，端口 3000），此时设置与历史存于服务端。页面启动时探测 `/api/health` 决定走哪一套，`?storage=local` 与 `?storage=remote` 可强制指定。
 
 ```bash
 npm install
-npm run dist                       # Windows 安装包 → dist/Missive-Setup-<版本>.exe
-npx cap sync android               # 把 web/ 同步进安卓工程
-cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/
+npm run dist                              # Windows 安装包 → dist/
+npx cap sync android                      # 同步 web/ 至安卓工程
+cd android && ./gradlew assembleRelease   # APK → android/app/build/outputs/apk/release/
 ```
 
-安卓版要 JDK 21 + Android SDK（compileSdk 36、build-tools 35），签名信息放在 `android/keystore.properties`（不在仓库里，自己打包会出未签名的包）。
+安卓构建需 JDK 21 与 Android SDK（compileSdk 36、build-tools 35）。签名配置位于 `android/keystore.properties`，不在仓库内，缺失时产出未签名包。
 
-**技术栈**：前端纯手写 JS，无框架。手写动画的做法是把字体渲染成位图，用 Zhang-Suen 算法细化成单像素骨架，再沿骨架逐笔描出。笔迹采集走 Pointer Events + 压感，淡出用哈希溶解。桌面版是 Electron，安卓版是 Capacitor 套壳，两边装的都是同一份 `web/`。
+前端为无框架的原生 JS。手写动画将字形渲染为位图，经 Zhang-Suen 算法细化为单像素骨架，再沿骨架逐笔描出；笔迹采集走 Pointer Events 与压感；淡出为哈希溶解。桌面版为 Electron，安卓版为 Capacitor 套壳，两者装载同一份 `web/`。
 
 ```
 web/src/    app.js 状态机 · ink.js 笔迹 · scribe.js 手写动画 · dissolve.js 淡出
             glass.js 玻璃层 · settings.js 设置页 · history.js 历史页
             api.js 数据出入口（api-local.js 本地 / api-remote.js 走服务）
-            store.js IndexedDB · shared/ 前后端共用的上游请求与设置模型
+            store.js IndexedDB · shared/ 两端共用的上游请求与设置模型
 electron/   桌面版外壳          android/   安卓版原生工程
 server/     可选的 Node 服务
 ```
@@ -154,7 +122,7 @@ server/     可选的 Node 服务
 
 ## 授权与致谢
 
-本项目基于 [yana108/ebook-handwriting-diary](https://github.com/yana108/ebook-handwriting-diary)（MIT）二次开发，该项目又复刻自 [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)（MIT）。核心的时序设计、状态机与手写管线来自这两个项目，在此基础上重做了界面、设置系统、历史记录，以及桌面版、网页版和安卓版的打包发布。
+本项目基于 [yana108/ebook-handwriting-diary](https://github.com/yana108/ebook-handwriting-diary)（MIT）二次开发，该项目复刻自 [MaximeRivest/riddle](https://github.com/MaximeRivest/riddle)（MIT）。时序设计、状态机与手写管线来自这两个项目。
 
 预装字体各自遵循原始授权：霞鹜文楷、寒蝉春风、思源宋体、柳建毛草、钟齐志莽行等为开源字体（SIL OFL 或相应协议），西文花体来自 Google Fonts。
 

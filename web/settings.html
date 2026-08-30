@@ -123,6 +123,14 @@
       <section id="sec-hint">
         <h2>首屏提示文字</h2>
         <p class="hint">开屏页面引导语，会像回答一样一笔一笔写出来，可以换行。每天在所有开启状态的卡片中随机显示一张。</p>
+
+        <h4>提示语字号</h4>
+        <p class="hint">跟「回复字号」分开调。太长的提示语会自己折行，折到放不下时字号会再自动收一点。</p>
+        <div class="slider-row">
+          <span>小</span>
+          <input type="range" id="hintFontScale" min="0.5" max="1.5" step="0.05" />
+          <span>大</span>
+        </div>
         <div class="card-group" data-group="hint">
           <div class="card-group-head">
             <span class="card-group-title">提示语列表</span>

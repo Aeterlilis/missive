@@ -98,6 +98,8 @@ export function defaults() {
     penOnly: false,       // 防误触：只认笔，忽略手指/手掌触摸
     replyAlign: 'center',    // 纸上文字的水平对齐：left | center | right（AI回复和打字内容共用）
     replyFontScale: 1,       // 回复字号的缩放系数，1=按屏宽自适应算出来的原始大小（见 web/src/config.js 的 layout）
+    hintFontScale: 1,        // 首屏提示语的字号系数，跟 replyFontScale 分开：提示语要塞进图标下面
+                             // 那一小块地方，跟着回复字号一起放大容易撑到放不下
     toolbarPosition: 'left', // 写字页工具栏摆哪：left(左上竖排，绘画软件那种) | bottom(底部居中，够得着拇指)
     confirmClearAll: true,   // 一键清空笔迹前弹一下确认。默认开——清空不可逆，误触一次就全没了
     confirmOnReset: true,    // 点重置对话时弹框问要不要先总结成长期记忆。关掉就直接重置、不总结——
@@ -285,6 +287,7 @@ export function publicSettings(s, extras = {}) {
     inkFadeSeconds: s.inkFadeSeconds,
     penOnly: s.penOnly,
     replyFontScale: s.replyFontScale,
+    hintFontScale: s.hintFontScale,
     replyAlign: s.replyAlign,
     toolbarPosition: s.toolbarPosition,
     confirmClearAll: s.confirmClearAll,
@@ -336,6 +339,7 @@ export function applySettingsPatch(settings, patch = {}) {
   if (typeof body.inkFadeSeconds === 'number' && body.inkFadeSeconds > 0) next.inkFadeSeconds = clamp(body.inkFadeSeconds, 0.3, 6);
   if (typeof body.penOnly === 'boolean') next.penOnly = body.penOnly;
   if (typeof body.replyFontScale === 'number' && body.replyFontScale > 0) next.replyFontScale = clamp(body.replyFontScale, 0.5, 1.5);
+  if (typeof body.hintFontScale === 'number' && body.hintFontScale > 0) next.hintFontScale = clamp(body.hintFontScale, 0.5, 1.5);
   if (['left', 'center', 'right'].includes(body.replyAlign)) next.replyAlign = body.replyAlign;
   if (['left', 'bottom'].includes(body.toolbarPosition)) next.toolbarPosition = body.toolbarPosition;
   if (typeof body.confirmClearAll === 'boolean') next.confirmClearAll = body.confirmClearAll;

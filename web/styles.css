@@ -115,9 +115,11 @@ body.debug #debug { display: block; }
 
 /* 提示语：外层定宽定高并裁切，宽度决定字号（CONFIG.layout 按画布宽算字号），
    高度由 app.js 按两行算好写进来。内层画布靠负 margin 把实际内容居中。 */
+/* 高度由 app.js 按一行的行高定死，跟提示语实际占几行无关——图标挂在这块上面，
+   高度一变图标就会上下跳。占两行以上的提示语从框底溢出去往下排，所以不能裁。 */
 #hint-text-wrap {
   width: min(72vw, 520px);
-  overflow: hidden;
+  overflow: visible;
 }
 #hint-text { display: block; }
 

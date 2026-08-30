@@ -571,3 +571,45 @@ textarea {
   section { scroll-margin-top: 24px; }
 }
 section[id] { scroll-margin-top: 118px; }
+
+
+/* ─── 应用内确认浮层（src/confirm.js）：替代原生 confirm()，跟卡片同一套玻璃材质 ─── */
+.confirm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.28);
+}
+/* 退场才动透明度。入场只让浮层缩放着出现，不做淡入——动画一旦没能推进
+   （页面在后台不合成帧），停在 opacity:0 的遮罩会看不见却仍然拦着点击。 */
+.confirm-scrim.closing { animation: confirm-scrim-out 0.18s ease forwards; }
+@keyframes confirm-scrim-out { to { opacity: 0; } }
+.confirm-box {
+  width: min(320px, 100%);
+  padding: 20px 20px 16px;
+  border-radius: 18px;
+  background: var(--box-bg);
+  backdrop-filter: var(--box-blur);
+  -webkit-backdrop-filter: var(--box-blur);
+  box-shadow: var(--box-rim);
+  border: 1px solid var(--border-color);
+  border-color: var(--box-border-color);
+  animation: confirm-box-in 0.18s ease;
+}
+/* 同理只缩放不淡出：卡在 0.94 倍最多是小一圈，仍然看得见、点得到 */
+@keyframes confirm-box-in { from { transform: scale(0.94); } to { transform: scale(1); } }
+.confirm-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.confirm-body { font-size: 13px; opacity: 0.7; margin-top: 8px; line-height: 1.6; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.confirm-actions .secondary { margin-top: 0; padding: 7px 16px; font-size: 13px; }
+/* 危险动作只染字和描边，底色留给 hover，跟卡片上那颗删除按钮的红色同源 */
+.confirm-danger { color: #a32a1e; border-color: rgba(192, 57, 43, 0.7); }
+.confirm-danger:hover {
+  background: rgba(192, 57, 43, 0.85);
+  color: #fff;
+  border-color: rgba(192, 57, 43, 0.85);
+}

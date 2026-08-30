@@ -4,6 +4,7 @@ import { registerServiceWorker } from './pwa.js';
 import { syncStatusBarColor } from './statusbar.js';
 import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
+import { confirmDialog } from './confirm.js';
 
 const listEl = document.getElementById('list');
 const emptyHint = document.getElementById('emptyHint');
@@ -185,7 +186,7 @@ function buildEntryEl(entry) {
   delBtn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg>';
   delBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (!confirm('删除这条记录？删了就没了。')) return;
+    if (!await confirmDialog('删除这条记录', '删掉就找不回来了。')) return;
     await api.deleteHistoryEntry(entry.id);
     await load();
   });

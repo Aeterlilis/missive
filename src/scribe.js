@@ -21,6 +21,8 @@ export class Scribe {
     // 水平对齐。默认跟随设置里的 CONFIG.REPLY_ALIGN；写字页的首屏提示语把它锁成
     // 'center'——那行字挂在居中的图标底下，不该跟着"AI回复靠左"这类设置跑偏。
     this.align = null;
+    // 字号系数。null=跟随 CONFIG.REPLY_FONT_SCALE；首屏提示语用自己那根滑块的值。
+    this.fontScale = null;
     this._inkRadius = null;          // 排版时按字号算出来的笔尖半径，见 appendText
     // 离屏渲染用
     this._off = null;                 // OffscreenCanvas / canvas
@@ -60,7 +62,7 @@ export class Scribe {
     await this.ensureFont();
     const cw = this.ctx.canvas.width;
     const ch = this.ctx.canvas.height;
-    const L = CONFIG.layout(cw, ch);
+    const L = CONFIG.layout(cw, ch, this.fontScale ?? undefined);
     // 笔尖粗细跟着字号走。写死一个半径的话，字号一小，笔画之间的空隙比笔尖还窄，
     // 一个字就糊成一坨——小屏、缩小过的回复字号、首屏提示语都会撞上。
     // 以基准字号（REPLY_FONT_PX）处等于 CONFIG.INK_RADIUS 为锚点等比缩放，
@@ -89,6 +91,15 @@ export class Scribe {
     this.overflow = null;
     this.done = false;
     return plain.length;
+  }
+
+  // 只折行、不排版也不落墨，返回折出来的行数组。
+  // 首屏提示语要先知道一段话占几行才能定画布高度，而画布高度又是排版的输入，
+  // 所以得有这么一次不产生任何副作用的预演。
+  async measureWrap(text, fontPx, maxWidth) {
+    await this.ensureFont();
+    const plain = String(text || '');
+    return wrapText(this._octx, plain, fontPx, maxWidth, pickFontFamily(plain));
   }
 
   // 渲染一行文字 → 细化 → trace，把折线加入 this.ink

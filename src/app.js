@@ -140,11 +140,12 @@ class App {
     this.fallbacks.setPools(fallbackPools);
     this._sizeHintCanvas();
     window.addEventListener('resize', () => {
-      this._sizeHintCanvas();
       this.appIcon.resize();
       this.thinkIcon.resize();
-      // 画布尺寸一变内容就没了，把当前这条原地重排一遍
+      // 画布尺寸一变内容就没了，把当前这条原地重排一遍。
+      // 不用先量一次尺寸——_writeHint 会按新宽度重新决定行数和画布高度。
       if (this._hintText) this._writeHint(this._hintText);
+      else this._sizeHintCanvas();
     });
 
     const hitEl = document.getElementById('hint-icon-hit');
@@ -162,25 +163,49 @@ class App {
   }
 
   // 提示语画布：宽度由 CSS 定（字号按画布宽算，所以定宽就是定字号），
-  // 高度按两行准备——设置里的提示语支持带一行副标题。
-  _sizeHintCanvas() {
+  // 高度按这条实际要占的行数来。
+  _sizeHintCanvas(rows = 2, fontScale = CONFIG.HINT_FONT_SCALE) {
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     const cssW = this.hintWrap.clientWidth || 320;
     const w = Math.floor(cssW * dpr);
     // 字号只跟宽度有关，先随便给个高度问出行高，再拿行高定真正的高度
-    const { lineHeight } = CONFIG.layout(w, 1000);
-    // 高度按两行算，另外上下都多留一截：花体那种笔锋会飘出字格，第一行顶上那些
+    const { lineHeight } = CONFIG.layout(w, 1000, fontScale);
+    const n = Math.max(1, rows);
+    // 行数之外上下都多留一截：花体那种笔锋会飘出字格，第一行顶上那些
     // 往上飘的笔画得有地方待，否则贴着画布上沿直接被切掉。
-    // 还要压过 appendText 的越界线（高度×0.85），卡太紧第二行会被判成溢出。
-    const h = Math.ceil(lineHeight * 3.4);
+    // 还要压过 appendText 的越界线（高度×0.85），卡太紧最后一行会被判成溢出。
+    const h = Math.ceil(lineHeight * (n + 1.6));
     this.hintCanvas.width = w;
     this.hintCanvas.height = h;
     this.hintCanvas.style.width = cssW + 'px';
     this.hintCanvas.style.height = (h / dpr) + 'px';
-    // 裁切框也跟着放宽一点，飘出来的笔锋才不会被框裁掉
-    this.hintWrap.style.height = Math.round((lineHeight * 2.4) / dpr) + 'px';
+    // 裁切框的高度只按一行算，跟这条占几行无关。图标挂在它上面，这个高度一变
+    // 图标就得跟着上下挪。多出来的行从框底溢出去往下排（styles.css 里是 overflow: visible）。
+    this.hintWrap.style.height = Math.round((lineHeight * 1.4) / dpr) + 'px';
     this._hintDpr = dpr;
     this._hintLineHeight = lineHeight;
+  }
+
+  // 排版之前先问一遍：这条提示语在当前宽度下要占几行、用多大的字。
+  // 行数是画布高度的输入，而画布高度又是排版的输入，所以必须先有这一次预演。
+  // 超过 HINT_SOFT_MAX_LINES 行就一档档缩字号；字号缩到下限还是超，就让画布长到够——
+  // 宁可整组高一点，也不要把话截掉。
+  async _fitHint(text) {
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const w = Math.floor((this.hintWrap.clientWidth || 320) * dpr);
+    let scale = CONFIG.HINT_FONT_SCALE;
+    let rows = 1;
+    let lastPx = null;
+    for (;;) {
+      const L = CONFIG.layout(w, 1000, scale);
+      const lines = await this.hintScribe.measureWrap(text, L.fontPx, w - 2 * L.marginX);
+      rows = Math.min(HINT_HARD_MAX_LINES, Math.max(1, lines.length));
+      if (rows <= HINT_SOFT_MAX_LINES) break;
+      if (L.fontPx === lastPx) break;   // 字号已经压到 layout() 的下限，再缩也不会变
+      lastPx = L.fontPx;
+      scale -= 0.05;
+    }
+    return { rows, scale };
   }
 
   // 显示招呼语（招呼池那条）。重新打招呼就等于这一轮没被戳过，档位归零。
@@ -194,6 +219,15 @@ class App {
     this._hintText = String(text || DEFAULT_HINT);
     this._hintDissolve = null;
     this.hintScribe.reset();
+    // 画布得先按这条的行数和字号定好尺寸，再开始排版
+    try {
+      const { rows, scale } = await this._fitHint(this._hintText);
+      this.hintScribe.fontScale = scale;
+      this._sizeHintCanvas(rows, scale);
+    } catch (e) {
+      console.warn('提示语预排版失败，按两行兜底:', e.message);
+      this._sizeHintCanvas();
+    }
     this.hintCtx.clearRect(0, 0, this.hintCanvas.width, this.hintCanvas.height);
     try {
       // 提示语卡片允许换行（默认那张就是"写点什么…\n比如：今天发生了什么"）。
@@ -212,14 +246,15 @@ class App {
       console.warn('提示语排版失败:', e.message);
       return;
     }
-    // 实际排成几行是排完才知道的。把这几行在裁切框里居中，一行两行都不会把图标顶得上下跳。
+    // 第一行永远落在同一个位置，后面的行往下排。按整块墨迹居中的话，行数一变
+    // 整组的高度就变，上面那个图标会跟着上下跳。
+    // 对齐用字格顶线（y）而不是墨迹顶（top）：笔锋往上飘多少逐句不同，
+    // 按墨迹对齐的话第一行的位置会跟着句子飘。
     const ls = this.hintScribe.lines;
     if (ls.length) {
-      const top = ls[0].top;
-      const bottom = ls[ls.length - 1].top + ls[ls.length - 1].height;
-      const wrapH = this.hintWrap.clientHeight * this._hintDpr;
+      const pad = this._hintLineHeight * 0.2;
       this.hintCanvas.style.marginTop =
-        Math.round(((wrapH - (bottom - top)) / 2 - top) / this._hintDpr) + 'px';
+        Math.round((pad - ls[0].y) / this._hintDpr) + 'px';
     }
     // 水平方向再按真实墨迹校一次。scribe 的居中是按字符宽度算的，而"。""，"这类
     // 标点整格里的墨只占左边一小块，结尾带标点的句子看着就会偏右。待写的点这会儿
@@ -995,6 +1030,7 @@ async function loadRuntimeConfig() {
     applyGlassIntensity(s.glassIntensity);
     applyToolbarPosition(s.toolbarPosition);
     if (typeof s.replyFontScale === 'number') CONFIG.REPLY_FONT_SCALE = s.replyFontScale;
+    if (typeof s.hintFontScale === 'number') CONFIG.HINT_FONT_SCALE = s.hintFontScale;
     if (['left', 'center', 'right'].includes(s.replyAlign)) CONFIG.REPLY_ALIGN = s.replyAlign;
     CONFIG.CONFIRM_CLEAR_ALL = s.confirmClearAll !== false;
     CONFIG.CONFIRM_ON_RESET = s.confirmOnReset !== false;
@@ -1050,6 +1086,11 @@ async function loadRuntimeConfig() {
 // 首屏那条提示语（招呼池：设置里的 hint 卡片，每天随机一条）。
 // loadRuntimeConfig 跑在 new App() 之前，那会儿还没有画布可写，所以先存下来，
 // 由 App 构造完之后自己取走。
+// 首屏提示语的行数上限：软上限之内字号不动，超过就缩字号往回压；
+// 硬上限是缩到最小也放不下时的兜底，再长就只能截。
+const HINT_SOFT_MAX_LINES = 4;
+const HINT_HARD_MAX_LINES = 8;
+
 export const DEFAULT_HINT = '用笔在这里写点什么…';
 let greetingText = DEFAULT_HINT;
 // 戳出来的那五档：AI 按人设生成过就用它的，没有就是 null（前端回落到内置兜底）

@@ -5,6 +5,7 @@ import { registerServiceWorker } from './pwa.js';
 import { syncStatusBarColor } from './statusbar.js';
 import { api } from './api.js';
 import { applyGlassIntensity } from './glass.js';
+import { confirmDialog } from './confirm.js';
 
 const form = document.getElementById('form');
 const $ = (id) => document.getElementById(id);
@@ -579,10 +580,10 @@ function handleStackClick(card, head, e) {
   const stack = card.closest('.card-stack');
   if (!stack) return false;
   if (stack.classList.contains('collapsed')) {
-    if (stack.classList.contains('has-more')) {
-      stackState[stack.dataset.stack] = false;
-      stack.classList.remove('collapsed');
-    }
+    // 组里只有一张卡时没有展开这回事，点击要放行给编辑态，不能吞掉
+    if (!stack.classList.contains('has-more')) return false;
+    stackState[stack.dataset.stack] = false;
+    stack.classList.remove('collapsed');
     return true;
   }
   const isFront = card === stack.querySelector('.card:first-child');
@@ -792,7 +793,7 @@ function buildProfileCard(profile) {
 
   card.appendChild(buildDeleteFab(async () => {
     if (data.profiles.length <= 1) { setStatus('至少要留一个配置', true); return; }
-    if (!confirm(`删除配置"${profile.name}"？`)) return;
+    if (!await confirmDialog(`删除配置「${profile.name}」`, '删掉就找不回来了。')) return;
     try {
       await api.deleteProfile(profile.id);
       await load();
@@ -853,7 +854,7 @@ function buildPromptCard(cardData) {
   });
 
   card.appendChild(buildDeleteFab(async () => {
-    if (!confirm(`删除卡片"${cardData.title}"？`)) return;
+    if (!await confirmDialog(`删除卡片「${cardData.title}」`, '删掉就找不回来了。')) return;
     try {
       await api.deleteCard(cardData.id);
       await load();
@@ -889,7 +890,7 @@ function renderCardStack(category, exclusive) {
   for (const item of ordered) {
     stackEl.appendChild(exclusive ? buildProfileCard(item) : buildPromptCard(item));
   }
-  stackEl.classList.toggle('collapsed', !!stackState[category]);
+  stackEl.classList.toggle('collapsed', items.length > 1 && !!stackState[category]);
   stackEl.classList.toggle('has-more', items.length > 1);
 }
 
@@ -1009,6 +1010,7 @@ async function load() {
     // 只有写字页会用到，设置页没有那排工具栏可预览，所以只回填选中态
     alignPills.setActive(data.replyAlign || 'center');
     setRangeValue('replyFontScale', typeof data.replyFontScale === 'number' ? data.replyFontScale : 1);
+    setRangeValue('hintFontScale', typeof data.hintFontScale === 'number' ? data.hintFontScale : 1);
     toolbarPills.setActive(data.toolbarPosition || 'left');
 
     cjkFontPills.setActive(data.cjkFont || 'default');
@@ -1172,6 +1174,7 @@ async function saveAll() {
       inkFadeSeconds: parseFloat($('inkFadeSeconds').value) || 0.9,
       penOnly: $('penOnly').checked,
       replyFontScale: parseFloat($('replyFontScale').value) || 1,
+      hintFontScale: parseFloat($('hintFontScale').value) || 1,
       replyAlign: alignPills.getActive() || 'center',
       toolbarPosition: toolbarPills.getActive() || 'left',
       confirmClearAll: $('confirmClearAll').checked,

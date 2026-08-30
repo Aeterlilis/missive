@@ -42,6 +42,10 @@ export const CONFIG = {
   // 系数能在保留自适应的前提下整体调大调小。
   REPLY_FONT_SCALE: 1,
 
+  // 首屏提示语的字号系数，跟上面那个分开（见 settings.js 的 hintFontScale）。
+  // 提示语的地方是固定的一小块，跟着回复字号走会被动撑到放不下。
+  HINT_FONT_SCALE: 1,
+
   // 纸上文字的水平对齐：left | center | right，由设置决定（见 settings.js 的 replyAlign）。
   // AI 回复和打字提交的内容都吃这个，写字页的打字框也跟着一起变，三者始终一致。
   REPLY_ALIGN: 'center',
@@ -49,12 +53,14 @@ export const CONFIG = {
   // ─── 屏幕自适应（核心）──────────────────────────
   // 根据画布宽高，算出合适的字号、留白、回答可用区域。
   // 目标：任何设备上，回答都不超出屏幕底部，字号随屏宽缩放。
-  layout(canvasW, canvasH) {
+  // fontScale 不传就用回复字号那个系数；首屏提示语传自己的（见 app.js 的 hintScribe）。
+  layout(canvasW, canvasH, fontScale) {
     // 字号 = 屏宽的 1/12，限制在 [40, 96] 之间（小屏不小于40，大屏不超过96），
     // 再乘上用户的缩放系数。乘完另夹一道绝对上下限，防止滑块拉到极端时
     // 小到看不清或大到一行放不下两个字。
     const base = Math.max(40, Math.min(96, Math.round(canvasW / 12)));
-    const fontPx = Math.max(22, Math.min(120, Math.round(base * this.REPLY_FONT_SCALE)));
+    const scale = typeof fontScale === 'number' ? fontScale : this.REPLY_FONT_SCALE;
+    const fontPx = Math.max(22, Math.min(120, Math.round(base * scale)));
     // 左右留白 = 屏宽的 8%，限制在 [40, 120]
     const marginX = Math.max(40, Math.min(120, Math.round(canvasW * 0.08)));
     // 行高 = 字号 × 1.4
